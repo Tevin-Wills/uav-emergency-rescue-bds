@@ -1,0 +1,11 @@
+# RTK rover configuration (onboard UAV)
+# TODO: Fill in with actual hardware parameters for Member 1
+
+rtk_rover:
+  port: /dev/ttyUSB1       # Serial port for rover receiver
+  baud_rate: 115200
+  corrections_source: ntrip  # or serial from base directly
+  ntrip:
+    host: ""               # TODO: set NTRIP caster host if used
+    port: 2101
+    mountpoint: ""

@@ -1,0 +1,12 @@
+# BeiDou short message format definitions
+# TODO: Expand with actual protocol specification for Member 5
+
+beidou_sms:
+  max_message_length: 210    # characters (BDS standard)
+  encoding: gbk
+  coordinate_format:
+    latitude_field: "LAT"
+    longitude_field: "LON"
+    altitude_field: "ALT"
+    separator: ","
+  # Example message: "SOS,LAT:22.3456,LON:114.1234,ALT:50.0"

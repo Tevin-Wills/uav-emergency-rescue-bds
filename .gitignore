@@ -1,0 +1,36 @@
+# ROS2 build outputs
+build/
+install/
+log/
+
+# Python
+*.pyc
+*.pyo
+__pycache__/
+
+# PX4 build artifacts
+px4/build/
+*.px4
+*.elf
+*.bin
+*.map
+
+# Simulation temp outputs
+simulation/logs/
+*.bag
+*.db3
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+*.local

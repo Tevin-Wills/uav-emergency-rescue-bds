@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up ROS2 Humble
+        uses: ros-tooling/setup-ros@v0.7
+        with:
+          required-ros-distributions: humble
+
+      - name: Install dependencies
+        run: |
+          source /opt/ros/humble/setup.bash
+          cd ros2_ws
+          rosdep update
+          rosdep install --from-paths src --ignore-src -r -y
+
+      - name: Build workspace
+        run: |
+          source /opt/ros/humble/setup.bash
+          cd ros2_ws
+          colcon build --symlink-install
+
+      - name: Run tests
+        run: |
+          source /opt/ros/humble/setup.bash
+          cd ros2_ws
+          source install/setup.bash
+          colcon test --return-code-on-test-failure

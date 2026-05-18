@@ -1,0 +1,10 @@
+# RTK base station configuration
+# TODO: Fill in with actual hardware parameters for Member 1
+
+rtk_base:
+  port: /dev/ttyUSB0       # Serial port for base station receiver
+  baud_rate: 115200
+  output_format: RTCM3     # RTCM3 corrections for rover
+  survey_in:
+    min_duration: 60       # seconds
+    accuracy_limit: 0.01   # metres
