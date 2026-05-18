@@ -1,6 +1,6 @@
 #!/bin/bash
 # Builds all ROS2 packages in the workspace.
-# Source ROS2 Humble before running this script.
+# Source ROS2 Jazzy before running this script.
 
 set -e
 
@@ -11,7 +11,7 @@ echo "=== UAV Emergency Rescue System — ROS2 Build ==="
 
 # Check ROS2 is sourced
 if [ -z "$ROS_DISTRO" ]; then
-    echo "[ERROR] ROS2 is not sourced. Run: source /opt/ros/humble/setup.bash"
+    echo "[ERROR] ROS2 is not sourced. Run: source /opt/ros/jazzy/setup.bash"
     exit 1
 fi
 

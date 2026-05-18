@@ -11,7 +11,7 @@ echo "=== UAV Emergency Rescue System — Full System Launch ==="
 
 # Check ROS2 is sourced
 if [ -z "$ROS_DISTRO" ]; then
-    echo "[ERROR] ROS2 is not sourced. Run: source /opt/ros/humble/setup.bash"
+    echo "[ERROR] ROS2 is not sourced. Run: source /opt/ros/jazzy/setup.bash"
     exit 1
 fi
 
