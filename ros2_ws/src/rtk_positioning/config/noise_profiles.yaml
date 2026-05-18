@@ -1,0 +1,6 @@
+rtk_positioning_node:
+  ros__parameters:
+    noise.normal_gnss_std_m: 1.5
+    noise.rtk_float_std_m: 0.25
+    noise.rtk_fixed_std_m: 0.03
+    noise.correction_lost_std_m: 2.5

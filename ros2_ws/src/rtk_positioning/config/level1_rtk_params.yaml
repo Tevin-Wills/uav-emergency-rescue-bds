@@ -1,0 +1,12 @@
+simulated_uav_node:
+  ros__parameters:
+    publish_rate_hz: 10.0
+    leg_length_m: 50.0
+    speed_m_s: 5.0
+    flight_altitude_m: 30.0
+
+logger_node:
+  ros__parameters:
+    # log_directory defaults to <repo_root>/results/logs/rtk_positioning/level1
+    # Override here with an absolute path only if the repo is not at ~/uav-emergency-rescue-bds
+    log_directory: ""

@@ -1,0 +1,1 @@
+ros_time_sec,ground_truth_x,ground_truth_y,ground_truth_z,raw_gnss_lat,raw_gnss_lon,raw_gnss_alt,rtk_lat,rtk_lon,rtk_alt,raw_gnss_std_m,rtk_std_m,improvement_pct,rtk_status_code,rtk_status_name,rtk_accuracy_m
