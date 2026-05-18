@@ -1,0 +1,31 @@
+# Sample obstacle map for path planning module testing
+# Obstacles are defined as bounding boxes in WGS84 coordinates
+
+obstacles:
+  - id: OBS_001
+    type: collapsed_building
+    center_lat: 39.98115
+    center_lon: 116.34730
+    width_m: 20.0
+    length_m: 15.0
+    height_m: 8.0
+
+  - id: OBS_002
+    type: obstacle_block
+    center_lat: 39.98118
+    center_lon: 116.34750
+    width_m: 5.0
+    length_m: 5.0
+    height_m: 3.0
+
+  - id: OBS_003
+    type: obstacle_block
+    center_lat: 39.98120
+    center_lon: 116.34762
+    width_m: 5.0
+    length_m: 5.0
+    height_m: 4.0
+
+safety_margin_m: 2.0
+coordinate_system: WGS84
+generated_at: "2026-05-18T14:30:00"

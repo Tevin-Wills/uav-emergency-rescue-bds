@@ -1,0 +1,10 @@
+{
+  "message_id": "BDS_0042",
+  "sender_id": "RESCUE_BASE_01",
+  "raw_message": "SOS:39.98125N116.34788E",
+  "decoded_latitude": 39.98125,
+  "decoded_longitude": 116.34788,
+  "altitude_m": 42.0,
+  "priority": "urgent",
+  "received_at": "2026-05-18T14:29:58"
+}

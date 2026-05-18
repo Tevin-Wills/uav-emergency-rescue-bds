@@ -1,33 +1,55 @@
-# UAV Emergency Rescue System
+# UAV Emergency Rescue System Based on BeiDou Navigation and Short Message Communication
 
-A five-member university engineering team project integrating high-precision UAV positioning, autonomous mission control, target detection and tracking, path planning, and BeiDou short message communication into a unified emergency rescue platform.
+A five-member university engineering team project that builds a simulation-based integrated UAV emergency rescue system using PX4 SITL, ROS 2 Jazzy, Gazebo Harmonic, RTK GNSS positioning, and BeiDou short message communication.
+
+---
+
+## Project Description
+
+This project demonstrates a complete UAV emergency rescue workflow in simulation:
+
+1. A simulated BeiDou short message delivers rescue coordinates from a survivor.
+2. The mission is planned and uploaded via QGroundControl.
+3. The UAV flies an autonomous obstacle-free path to the target location.
+4. RTK GNSS positioning provides centimetre-level accuracy throughout the flight.
+5. The UAV detects and tracks the rescue target using an onboard camera.
+6. The UAV performs a precision fixed-point landing at the target.
+
+All five functions are implemented as independent ROS 2 modules and integrated into one end-to-end simulation system.
 
 ---
 
 ## System Overview
 
-The system combines the following technologies into a single end-to-end rescue workflow:
-
-- **PX4 Autopilot** — flight controller firmware and SITL simulation
-- **ROS2 Humble** — middleware for inter-module communication
-- **Gazebo Harmonic** — 3D simulation environment
-- **RTK GNSS** — centimetre-level positioning (rover + base station)
-- **QGroundControl** — ground control station for mission upload and telemetry
-- **BeiDou Short Message Service** — satellite-based rescue coordinate communication
+```
+BeiDou short message (simulated)
+        ↓
+beidou_short_message → /target/emergency_coordinate
+        ↓
+qgc_control (QGroundControl + MAVLink)
+        ↓  /mission/waypoints
+path_planning
+        ↓  /fmu/in/trajectory_setpoint
+PX4 SITL ↔ Gazebo Harmonic
+        ↓
+rtk_positioning + target_detection_tracking
+        ↓
+Rescue complete — precision landing
+```
 
 ---
 
 ## Team Modules
 
-| Member | Package | Responsibility |
+| Student | Package | Responsibility |
 |--------|---------|----------------|
-| Member 1 | `rtk_positioning` | RTK GNSS base-rover setup, high-precision pose topics |
-| Member 2 | `uav_control_gcs` | QGroundControl mission upload, telemetry, command flow |
-| Member 3 | `target_tracking_landing` | Camera-based detection, tracking, fixed-point landing |
-| Member 4 | `path_planning_rescue` | Obstacle avoidance, autonomous route planning |
-| Member 5 | `beidou_sms` | BeiDou short message send/receive, coordinate forwarding |
+| Student 1 | `rtk_positioning` | RTK GNSS base-rover setup, centimetre-level position topics |
+| Student 2 | `qgc_control` | QGroundControl mission upload, MAVLink telemetry, command flow |
+| Student 3 | `target_detection_tracking` | Camera-based target detection, tracking, fixed-point landing |
+| Student 4 | `path_planning` | Obstacle avoidance, autonomous route planning, trajectory to PX4 |
+| Student 5 | `beidou_short_message` | BeiDou short message decode, rescue coordinate forwarding |
 
-Shared packages: `interfaces` (common message/service definitions), `bringup` (full-system launch files).
+Shared packages: `interfaces` (custom ROS 2 message and service types), `bringup` (full-system launch files).
 
 ---
 
@@ -37,35 +59,85 @@ Shared packages: `interfaces` (common message/service definitions), `bringup` (f
 uav-emergency-rescue-bds/
 ├── README.md
 ├── .gitignore
-├── docs/                        # Architecture, workflows, environment guides
-├── px4/                         # PX4 configuration files
-├── ros2_ws/src/                 # All ROS2 packages
+│
+├── docs/                          # Project-level documentation
+│   ├── project_overview.md
+│   ├── system_architecture.md
+│   ├── team_roles.md
+│   ├── simulation_workflow.md
+│   ├── integration_plan.md
+│   └── environment_setup.md
+│
+├── setup/                         # Installation guides
+│   ├── ubuntu_24_04_native_setup.md
+│   ├── wsl2_setup.md
+│   ├── ros2_jazzy_setup.md
+│   ├── gazebo_harmonic_setup.md
+│   ├── px4_setup.md
+│   └── qgroundcontrol_setup.md
+│
+├── interfaces/                    # Shared interface documentation
+│   ├── message_formats.md
+│   ├── ros2_topics.md
+│   ├── coordinate_format.md
+│   └── integration_contract.md
+│
+├── ros2_ws/src/                   # All ROS 2 packages
 │   ├── rtk_positioning/
-│   ├── uav_control_gcs/
-│   ├── target_tracking_landing/
-│   ├── path_planning_rescue/
-│   ├── beidou_sms/
-│   ├── interfaces/
-│   └── bringup/
-├── simulation/                  # Gazebo worlds, models, launch, configs
-├── config/                      # RTK, QGC, and BeiDou config files
-├── scripts/                     # Setup, build, and run scripts
-└── .github/workflows/           # CI pipeline
+│   ├── qgc_control/
+│   ├── target_detection_tracking/
+│   ├── path_planning/
+│   ├── beidou_short_message/
+│   ├── interfaces/                # Shared .msg and .srv definitions
+│   └── bringup/                   # Full-system launch files
+│
+├── simulation/                    # Gazebo worlds, models, and launch
+│   ├── worlds/
+│   ├── models/
+│   └── launch/
+│
+├── missions/                      # QGroundControl .plan mission files
+│
+├── data/                          # Sample data for module testing
+│
+├── reports/                       # Individual student report folders
+│   ├── student_1_rtk_positioning/
+│   ├── student_2_qgc_control/
+│   ├── student_3_target_detection/
+│   ├── student_4_path_planning/
+│   └── student_5_beidou_short_message/
+│
+└── results/                       # Simulation outputs
+    ├── screenshots/
+    ├── logs/
+    ├── graphs/
+    └── videos/
 ```
+
+---
+
+## Technology Stack
+
+| Component | Version |
+|-----------|---------|
+| OS | Ubuntu 24.04 LTS |
+| ROS 2 | Jazzy Jalisco |
+| Gazebo | Harmonic (LTS) |
+| PX4 | v1.14+ SITL |
+| QGroundControl | Latest stable |
+| Language | Python / C++ |
+| Protocol | MAVLink |
 
 ---
 
 ## Development Environment
 
-The team uses a standardized stack across all machines:
+The team supports two environments:
 
-- **OS:** Ubuntu 24.04 LTS (native or WSL2)
-- **ROS2:** Humble Hawksbill
-- **Gazebo:** Harmonic (LTS)
-- **PX4:** v1.14+ / main branch
-- **QGroundControl:** Latest stable AppImage
+- **Native Ubuntu 24.04** — recommended for full simulation and final integration.
+- **WSL2 Ubuntu 24.04** — acceptable for individual module development and testing.
 
-See [`docs/dev_environment.md`](docs/dev_environment.md) for full setup instructions for both native Ubuntu and WSL2.
+See [`docs/environment_setup.md`](docs/environment_setup.md) for a summary, and the `setup/` folder for detailed step-by-step guides.
 
 ---
 
@@ -76,18 +148,19 @@ See [`docs/dev_environment.md`](docs/dev_environment.md) for full setup instruct
 git clone https://github.com/Tevin-Wills/uav-emergency-rescue-bds.git
 cd uav-emergency-rescue-bds
 
-# 2. Set up the development environment
-./scripts/setup_px4.sh
+# 2. Source ROS 2 Jazzy
+source /opt/ros/jazzy/setup.bash
 
-# 3. Build all ROS2 packages
-./scripts/build_ros2.sh
+# 3. Install dependencies
+cd ros2_ws
+rosdep install --from-paths src --ignore-src -r -y
 
-# 4. Launch the full simulation
-./scripts/run_simulation.sh
-
-# 5. Run the full integrated system
-./scripts/run_full_system.sh
+# 4. Build all ROS 2 packages
+colcon build --symlink-install
+source install/setup.bash
 ```
+
+For PX4 SITL, Gazebo, and QGroundControl setup, see the `setup/` folder.
 
 ---
 
@@ -97,14 +170,15 @@ cd uav-emergency-rescue-bds
 main        ← stable milestones and final integration only
   └── dev   ← working integration branch
         ├── feature/rtk-positioning
-        ├── feature/uav-control-gcs
-        ├── feature/target-tracking
+        ├── feature/qgc-control
+        ├── feature/target-detection
         ├── feature/path-planning
         └── feature/beidou-sms
 ```
 
 - Work in your dedicated feature branch.
 - Open a pull request into `dev` when a module milestone is ready.
+- At least one other team member reviews before merging.
 - Merge from `dev` into `main` only at tested integration milestones.
 
 ---

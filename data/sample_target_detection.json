@@ -1,0 +1,20 @@
+{
+  "frame_id": 1042,
+  "timestamp": "2026-05-18T14:31:00",
+  "detected": true,
+  "confidence": 0.93,
+  "bounding_box": {
+    "x": 310,
+    "y": 235,
+    "width": 82,
+    "height": 78
+  },
+  "target_pose_estimate": {
+    "latitude": 39.98124,
+    "longitude": 116.34787,
+    "altitude_m": 42.0,
+    "horizontal_error_m": 0.5
+  },
+  "image_width": 640,
+  "image_height": 480
+}
