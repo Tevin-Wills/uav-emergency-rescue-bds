@@ -1,5 +1,5 @@
 """
-RTK positioning node for Level 1 RTK positioning simulation.
+RTK positioning node — supports Level 1 (standalone) and Level 2 (PX4/Gazebo) modes.
 
 This is the main simulation node. It:
   - Subscribes to the simulated UAV ground-truth position (/uav/ground_truth)
@@ -40,6 +40,7 @@ from rtk_positioning.gnss_noise_model import GnssNoiseModel
 from rtk_positioning.rtk_correction_model import RtkCorrectionModel
 from rtk_positioning.coordinate_transform import enu_to_wgs84
 from rtk_positioning.rtk_status_manager import RtkStatusManager
+from interfaces.msg import SimulatedRtcm
 
 
 class RtkPositioningNode(Node):
@@ -58,6 +59,13 @@ class RtkPositioningNode(Node):
         self.declare_parameter('noise.rtk_fixed_std_m',      0.03)
         self.declare_parameter('noise.correction_lost_std_m', 2.5)
 
+        # Level 2: correction-message-based status control
+        self.declare_parameter('use_simulated_rtcm',      False)
+        self.declare_parameter('simulated_rtcm_topic',    '/rtk/simulated_rtcm')
+        self.declare_parameter('correction_timeout_sec',  2.0)
+        self.declare_parameter('float_quality_threshold', 0.4)
+        self.declare_parameter('fixed_quality_threshold', 0.8)
+
         self._base_lat = self.get_parameter('base_station.latitude').value
         self._base_lon = self.get_parameter('base_station.longitude').value
         self._base_alt = self.get_parameter('base_station.altitude').value
@@ -74,10 +82,21 @@ class RtkPositioningNode(Node):
         self._status_manager   = RtkStatusManager()
         self._start_time       = None
 
+        self._use_l2                  = self.get_parameter('use_simulated_rtcm').value
+        self._correction_timeout_sec  = self.get_parameter('correction_timeout_sec').value
+        self._float_quality_threshold = self.get_parameter('float_quality_threshold').value
+        self._fixed_quality_threshold = self.get_parameter('fixed_quality_threshold').value
+        self._latest_rtcm             = None
+        self._last_rtcm_time          = None
+        self._had_corrections         = False
+
         self.create_subscription(
             Odometry, '/uav/ground_truth', self._ground_truth_cb, 10)
         self.create_subscription(
             NavSatFix, '/rtk/base_station', self._base_station_cb, 10)
+        if self._use_l2:
+            rtcm_topic = self.get_parameter('simulated_rtcm_topic').value
+            self.create_subscription(SimulatedRtcm, rtcm_topic, self._rtcm_cb, 10)
 
         self._pub_raw_gps      = self.create_publisher(NavSatFix,         '/uav/raw_gps',        10)
         self._pub_rtk_pos      = self.create_publisher(NavSatFix,         '/uav/rtk_position',   10)
@@ -85,8 +104,13 @@ class RtkPositioningNode(Node):
         self._pub_accuracy     = self.create_publisher(Float32MultiArray, '/rtk/accuracy',        10)
         self._pub_error_metrics = self.create_publisher(Float32MultiArray, '/rtk/error_metrics',  10)
 
+        mode = (
+            'Level 2 — PX4/Gazebo integration'
+            if self._use_l2 else
+            'Level 1 — standalone simulation'
+        )
         self.get_logger().info(
-            'RTK positioning node started (Level 1 — software simulation only)\n'
+            f'RTK positioning node started — {mode}\n'
             f'  noise GNSS_ONLY={self._noise_model.get_std("GNSS_ONLY")} m  '
             f'RTK_FLOAT={self._noise_model.get_std("RTK_FLOAT")} m  '
             f'RTK_FIXED={self._noise_model.get_std("RTK_FIXED")} m'
@@ -105,7 +129,11 @@ class RtkPositioningNode(Node):
             self._start_time = now
 
         elapsed_sec = (now - self._start_time).nanoseconds * 1e-9
-        rtk_status  = self._status_manager.update(elapsed_sec)
+        if self._use_l2:
+            rtk_status = self._get_l2_status()
+            self._status_manager.force_status(rtk_status)
+        else:
+            rtk_status = self._status_manager.update(elapsed_sec)
 
         true_pos = np.array([
             msg.pose.pose.position.x,
@@ -137,6 +165,31 @@ class RtkPositioningNode(Node):
         self._publish_rtk_status(rtk_status, rtk_std)
         self._publish_accuracy(raw_std, rtk_std)
         self._publish_error_metrics(raw_error_m, rtk_error_m)
+
+    # ------------------------------------------------------------------
+    def _rtcm_cb(self, msg: SimulatedRtcm):
+        self._latest_rtcm    = msg
+        self._last_rtcm_time = self.get_clock().now()
+
+    def _get_l2_status(self):
+        """Derive RTK status from the latest simulated correction message."""
+        if self._latest_rtcm is None:
+            return 'GNSS_ONLY'
+
+        msg_age = (self.get_clock().now() - self._last_rtcm_time).nanoseconds * 1e-9
+        if msg_age > self._correction_timeout_sec:
+            return 'CORRECTION_LOST'
+
+        rtcm = self._latest_rtcm
+        if not rtcm.correction_available:
+            return 'CORRECTION_LOST' if self._had_corrections else 'GNSS_ONLY'
+
+        self._had_corrections = True
+        if rtcm.correction_quality >= self._fixed_quality_threshold:
+            return 'RTK_FIXED'
+        elif rtcm.correction_quality >= self._float_quality_threshold:
+            return 'RTK_FLOAT'
+        return 'GNSS_ONLY'
 
     # ------------------------------------------------------------------
     def _publish_raw_gps(self, stamp, lat, lon, alt, std):

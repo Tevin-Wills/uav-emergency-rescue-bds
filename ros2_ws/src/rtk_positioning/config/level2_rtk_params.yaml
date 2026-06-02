@@ -1,0 +1,36 @@
+# Level 2 RTK positioning parameters.
+#
+# Phase 1 finding: px4_msgs is not installed, so /fmu/out/vehicle_odometry is
+# unavailable. UAV pose is sourced from the Gazebo navsat sensor via
+# ros_gz_bridge, bridged as sensor_msgs/NavSatFix on /gz/navsat.
+# World origin coordinates are the PX4 default Zurich/ETH world (sampled live).
+
+px4_pose_adapter_node:
+  ros__parameters:
+    gz_navsat_topic: "/gz/navsat"
+    world_origin_lat: 47.397971057728981
+    world_origin_lon: 8.5461637398001447
+    world_origin_alt: 0.0
+    publish_rate_hz: 10.0
+
+rtcm_correction_simulator_node:
+  ros__parameters:
+    publish_rate_hz: 5.0
+    correction_source: "simulated_base_station"
+    stable_quality: 0.95
+    float_quality: 0.5
+    lost_quality: 0.0
+    simulated_length_bytes: 120
+
+rtk_positioning_node:
+  ros__parameters:
+    use_simulated_rtcm: true
+    simulated_rtcm_topic: "/rtk/simulated_rtcm"
+    correction_timeout_sec: 2.0
+    float_quality_threshold: 0.4
+    fixed_quality_threshold: 0.8
+
+logger_node:
+  ros__parameters:
+    log_directory: ""
+    log_level: "level2"

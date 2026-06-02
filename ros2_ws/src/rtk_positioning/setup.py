@@ -15,9 +15,11 @@ setup(
             'config/base_station.yaml',
             'config/noise_profiles.yaml',
             'config/level1_rtk_params.yaml',
+            'config/level2_rtk_params.yaml',
         ]),
         ('share/' + package_name + '/launch', [
             'launch/level1_rtk_sim.launch.py',
+            'launch/level2_rtk_px4_sim.launch.py',
         ]),
     ],
     install_requires=['setuptools'],
@@ -32,7 +34,9 @@ setup(
             'base_station_node    = rtk_positioning.base_station_node:main',
             'simulated_uav_node   = rtk_positioning.simulated_uav_node:main',
             'rtk_positioning_node = rtk_positioning.rtk_positioning_node:main',
-            'logger_node          = rtk_positioning.logger_node:main',
+            'logger_node                    = rtk_positioning.logger_node:main',
+            'rtcm_correction_simulator_node = rtk_positioning.rtcm_correction_simulator_node:main',
+            'px4_pose_adapter_node          = rtk_positioning.px4_pose_adapter_node:main',
         ],
     },
 )

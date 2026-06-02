@@ -1,0 +1,9 @@
+std_msgs/Header header
+uint8 sequence_id
+uint8 fragment_id
+bool fragmented
+uint16 length
+bool correction_available
+float32 correction_age_sec
+float32 correction_quality
+string correction_source

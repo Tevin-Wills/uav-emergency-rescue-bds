@@ -3,7 +3,7 @@
 <package format="3">
   <name>rtk_positioning</name>
   <version>0.1.0</version>
-  <description>Level 1 RTK positioning simulation for UAV Emergency Rescue System</description>
+  <description>RTK GNSS positioning simulation for the UAV Emergency Rescue System — Level 1 standalone and Level 2 PX4/Gazebo-integrated modes</description>
   <maintainer email="tevinlemalasia254@gmail.com">Tevin Wills</maintainer>
   <license>MIT</license>
 
@@ -17,6 +17,8 @@
   <exec_depend>builtin_interfaces</exec_depend>
   <exec_depend>python3-numpy</exec_depend>
   <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>interfaces</exec_depend>
+  <exec_depend>ros_gz_bridge</exec_depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>

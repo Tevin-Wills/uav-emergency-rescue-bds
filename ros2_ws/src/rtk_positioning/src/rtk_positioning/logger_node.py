@@ -1,8 +1,9 @@
 """
-Logger node for Level 1 RTK positioning simulation.
+Logger node — supports Level 1 (standalone) and Level 2 (PX4/Gazebo) modes.
 
-Subscribes to all Level 1 output topics and writes timestamped CSV logs
-to results/logs/rtk_positioning/level1/.
+Subscribes to all RTK output topics and writes timestamped CSV logs.
+Level 1 logs go to results/logs/rtk_positioning/level1/.
+Level 2 logs go to results/logs/rtk_positioning/level2/.
 
 Each run creates a new file named by wall-clock start time so previous
 logs are never overwritten.
@@ -27,9 +28,10 @@ from nav_msgs.msg import Odometry
 from sensor_msgs.msg import NavSatFix
 from std_msgs.msg import String, Float32MultiArray
 from ament_index_python.packages import get_package_share_directory
+from interfaces.msg import SimulatedRtcm
 
 
-def _find_default_log_dir():
+def _find_default_log_dir(level='level1'):
     """Locate the repo results/ directory by searching up from the installed share path."""
     try:
         share_dir = get_package_share_directory('rtk_positioning')
@@ -37,14 +39,13 @@ def _find_default_log_dir():
         for _ in range(10):
             if os.path.isdir(os.path.join(path, 'results')):
                 return os.path.join(
-                    path, 'results', 'logs', 'rtk_positioning', 'level1')
+                    path, 'results', 'logs', 'rtk_positioning', level)
             path = os.path.dirname(path)
     except Exception:
         pass
-    # Fallback: assume standard repo location relative to home
     return os.path.join(
         os.path.expanduser('~'),
-        'uav-emergency-rescue-bds', 'results', 'logs', 'rtk_positioning', 'level1'
+        'uav-emergency-rescue-bds', 'results', 'logs', 'rtk_positioning', level
     )
 
 
@@ -60,39 +61,58 @@ class LoggerNode(Node):
         'rtk_status_code', 'rtk_status_name', 'rtk_accuracy_m',
     ]
 
+    _L2_EXTRA_HEADER = [
+        'correction_available',
+        'correction_quality',
+        'correction_age_sec',
+        'correction_sequence_id',
+    ]
+
     def __init__(self):
         super().__init__('logger_node')
 
         self.declare_parameter('log_directory', '')
+        self.declare_parameter('log_level',     'level1')
+
+        self._log_level = self.get_parameter('log_level').value
         log_dir = self.get_parameter('log_directory').value
         if not log_dir:
-            log_dir = _find_default_log_dir()
+            log_dir = _find_default_log_dir(self._log_level)
 
         os.makedirs(log_dir, exist_ok=True)
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        log_path  = os.path.join(log_dir, f'rtk_level1_{timestamp}.csv')
+        prefix    = f'rtk_{self._log_level}'
+        log_path  = os.path.join(log_dir, f'{prefix}_{timestamp}.csv')
+
+        header = self._CSV_HEADER + (self._L2_EXTRA_HEADER if self._log_level == 'level2' else [])
 
         self._csv_file   = open(log_path, 'w', newline='')
         self._csv_writer = csv.writer(self._csv_file)
-        self._csv_writer.writerow(self._CSV_HEADER)
+        self._csv_writer.writerow(header)
         self._csv_file.flush()
 
         # Cached latest values — updated as topics arrive
-        self._ground_truth = None
-        self._raw_gps      = None
-        self._rtk_pos      = None
-        self._rtk_status   = '1|GNSS_ONLY|1.5000'
-        self._accuracy     = [1.5, 1.5, 0.0]      # [raw_std, rtk_std, improvement]
-        self._error_metrics = [0.0, 0.0]           # [raw_gnss_error_m, rtk_error_m]
+        self._ground_truth  = None
+        self._raw_gps       = None
+        self._rtk_pos       = None
+        self._rtk_status    = '1|GNSS_ONLY|1.5000'
+        self._accuracy      = [1.5, 1.5, 0.0]
+        self._error_metrics = [0.0, 0.0]
+        self._rtcm          = None        # Level 2 only
 
-        self.create_subscription(Odometry,          '/uav/ground_truth',   self._gt_cb,           10)
-        self.create_subscription(NavSatFix,         '/uav/raw_gps',        self._raw_gps_cb,      10)
-        self.create_subscription(NavSatFix,         '/uav/rtk_position',   self._rtk_pos_cb,      10)
-        self.create_subscription(String,            '/uav/rtk_status',     self._status_cb,       10)
-        self.create_subscription(Float32MultiArray, '/rtk/accuracy',       self._accuracy_cb,     10)
+        self.create_subscription(Odometry,          '/uav/ground_truth',   self._gt_cb,            10)
+        self.create_subscription(NavSatFix,         '/uav/raw_gps',        self._raw_gps_cb,       10)
+        self.create_subscription(NavSatFix,         '/uav/rtk_position',   self._rtk_pos_cb,       10)
+        self.create_subscription(String,            '/uav/rtk_status',     self._status_cb,        10)
+        self.create_subscription(Float32MultiArray, '/rtk/accuracy',       self._accuracy_cb,      10)
         self.create_subscription(Float32MultiArray, '/rtk/error_metrics',  self._error_metrics_cb, 10)
 
-        self.get_logger().info(f'Logger node started — writing to: {log_path}')
+        if self._log_level == 'level2':
+            self.create_subscription(SimulatedRtcm, '/rtk/simulated_rtcm', self._rtcm_cb, 10)
+
+        self.get_logger().info(
+            f'Logger node started — level={self._log_level}  writing to: {log_path}'
+        )
 
     # ------------------------------------------------------------------
     def _gt_cb(self, msg: Odometry):
@@ -113,6 +133,9 @@ class LoggerNode(Node):
 
     def _error_metrics_cb(self, msg: Float32MultiArray):
         self._error_metrics = list(msg.data)
+
+    def _rtcm_cb(self, msg: SimulatedRtcm):
+        self._rtcm = msg
 
     # ------------------------------------------------------------------
     def _write_row(self):
@@ -153,7 +176,7 @@ class LoggerNode(Node):
         def fmt_f(v, decimals):
             return f'{v:.{decimals}f}' if v != '' else ''
 
-        self._csv_writer.writerow([
+        row = [
             fmt_f(ros_time, 4),
             fmt_f(gt_x, 4), fmt_f(gt_y, 4), fmt_f(gt_z, 4),
             fmt_f(raw_lat, 8), fmt_f(raw_lon, 8), fmt_f(raw_alt, 4),
@@ -161,7 +184,20 @@ class LoggerNode(Node):
             fmt_f(raw_err, 4), fmt_f(rtk_err, 4),
             fmt_f(raw_std, 4), fmt_f(rtk_std, 4), fmt_f(improvement, 2),
             status_code, status_name, rtk_acc,
-        ])
+        ]
+
+        if self._log_level == 'level2':
+            if self._rtcm is not None:
+                row += [
+                    str(self._rtcm.correction_available),
+                    fmt_f(self._rtcm.correction_quality, 4),
+                    fmt_f(self._rtcm.correction_age_sec, 4),
+                    str(self._rtcm.sequence_id),
+                ]
+            else:
+                row += ['', '', '', '']
+
+        self._csv_writer.writerow(row)
         self._csv_file.flush()
 
     # ------------------------------------------------------------------
