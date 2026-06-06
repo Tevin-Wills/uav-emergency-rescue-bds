@@ -1,6 +1,6 @@
 # BDS-SMC2 — UAV BeiDou Rescue Communication System
 
-Dissertation research project measuring the performance of BeiDou Short Message Communication (BDS-SMC/RDSS) for UAV search-and-rescue telemetry. The system runs on an ESP32 dev board and tests five encoding strategies against five research gaps.
+Dissertation research project measuring the performance of BeiDou Short Message Communication (BDS-SMC/RDSS) for UAV search-and-rescue telemetry. The system runs on an ESP32 dev board and investigates four research gaps across encoding efficiency, transmission latency, environmental reception, and telemetry compression.
 
 ---
 
@@ -8,11 +8,10 @@ Dissertation research project measuring the performance of BeiDou Short Message 
 
 | Gap | Description | Status |
 |-----|-------------|--------|
-| Gap 1 | ASCII vs Binary coordinate encoding (bit-size) | Firmware ready |
-| Gap 2 | End-to-end latency (T1/T2/T3, 30 transmissions) | Firmware ready |
-| Gap 3 | Field test delivery rate (4 environments × 20 TX) | Firmware ready |
-| Gap 5 | AES-128 encryption overhead measurement | Firmware ready |
-| Gap 6 | Telemetry compression: ASCII / Binary / Huffman | Firmware ready |
+| Gap 1 | ASCII vs Binary coordinate encoding (bit-size) | Complete |
+| Gap 2 | End-to-end latency (T1/T2/T3, 30 transmissions) | Baseline collected |
+| Gap 3 | Field test delivery rate (4 envs × 3 locations × 20 TX) | Pending hardware |
+| Gap 6 | Telemetry compression: ASCII / Binary / Huffman | Complete |
 
 ---
 
@@ -33,7 +32,7 @@ BDS-SMC2/
 ├── data/
 │   ├── gap1_compression.csv   # Gap 1 results
 │   ├── gap2_latency.csv       # Gap 2 results
-│   ├── gap5_encryption.csv    # Gap 5 results
+│   ├── gap3_field_test.csv    # Gap 3 results
 │   └── gap6_telemetry.csv     # Gap 6 results
 ├── results/                   # Analysis output (generated locally)
 ├── SETUP_CHECKLIST.md         # Step-by-step hardware & software setup
@@ -62,11 +61,9 @@ int MODE = 0;  // 0=ASCII  1=Binary  2=Huffman (Gap 6)
 
 | MODE | Gap | Description |
 |------|-----|-------------|
-| 0 | Gap 1 & 2 | ASCII coordinate encoding — baseline |
-| 1 | Gap 1 | Binary fixed-point encoding (64-bit vs ~152-bit ASCII) |
+| 0 | Gap 1, 2 & 3 | ASCII coordinate encoding — baseline |
+| 1 | Gap 1 | Binary fixed-point encoding (64-bit vs 264-bit ASCII) |
 | 2 | Gap 6 | Dynamic Huffman compression of full telemetry string |
-
-> AES-128 encryption (Gap 5) is handled by a separate Python script (`python/telemetry_compare.py`).
 
 ---
 
@@ -80,7 +77,7 @@ cd BDS-SMC2
 
 ### 2. Install Python dependencies
 ```bash
-pip install pyserial pycryptodome matplotlib pandas dahuffman
+pip install pyserial matplotlib pandas dahuffman scipy reportlab fpdf2
 ```
 
 ### 3. Flash firmware
@@ -145,7 +142,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed git workflow.
 | ESP32 board package | via Espressif mirror |
 | Python | 3.14 |
 | pyserial | latest |
-| pycryptodome | latest |
 | matplotlib | latest |
 | pandas | latest |
 | dahuffman | latest |

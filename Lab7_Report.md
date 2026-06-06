@@ -14,7 +14,6 @@ This lab investigates BDS-SMC for UAV search-and-rescue telemetry, examining:
 - Encoding efficiency (ASCII vs Binary vs Huffman)
 - Transmission latency under real satellite conditions
 - Signal reception in four environmental scenarios
-- Security overhead from AES-128-CBC encryption
 
 ---
 
@@ -66,7 +65,6 @@ $CCTXM,<destID>,<payload>*<XOR_checksum>\r\n
 |------|---------------|---------|
 | ASCII (Gap 1) | `LAT:<lat>,LON:<lon>` | `LAT:30.4196,LON:120.2977` |
 | Binary (Gap 1) | `BIN:<16-char hex>` | `BIN:000BB6B4` |
-| AES (Gap 5) | `ENC:<32-char hex>` | `ENC:3A7F...` |
 | Huffman (Gap 6) | `HUF:<hex>` | `HUF:9D4C...` |
 
 ---
@@ -137,7 +135,6 @@ $CCTXM,<destID>,<payload>*<XOR_checksum>\r\n
 | ASCII | 46 | 368 | baseline | +240 bits |
 | Binary | 16 | 128 | -240 (65.2%) | baseline |
 | Huffman | 23 | 184 | -184 (50.0%) | +56 bits |
-| AES-128 | 32 | 256 | -112 (30.4%) | +128 bits (+100%) |
 
 *Computed by `python telemetry_compare.py` — Hangzhou coords (30.4196, 120.2977), full 7-field struct.*
 
@@ -156,9 +153,6 @@ BDS-3 short message latency is primarily determined by satellite access scheduli
 ### 4.3 Environmental Impact
 Open-sky conditions are required for reliable BDS-3 communication. GEO satellite geometry from Yuhang District requires a clear northern sky (equator is north from Southern Hemisphere; Hangzhou is Northern Hemisphere so antenna faces south — toward the equator). Indoor and urban canyon environments significantly reduce success rates due to signal attenuation.
 
-### 4.4 Security Overhead
-AES-128-CBC adds one full 128-bit block per message (doubling the binary payload size) due to block cipher padding requirements. For a 64-bit coordinate payload, this represents 100% overhead. In a UAV rescue scenario this overhead is acceptable given the security benefit for sensitive location data.
-
 ---
 
 ## 5. Conclusion
@@ -168,7 +162,7 @@ BDS-SMC provides a viable satellite communication channel for UAV rescue telemet
 1. **Binary encoding** reduces message size by ~69% vs ASCII, critical for BDS-SMC's limited payload capacity.
 2. **Latency** of 0.8–4.5 s is acceptable for search-and-rescue coordination but unsuitable for real-time control.
 3. **Open-sky** conditions are essential; indoor and urban scenarios yield significantly lower success rates.
-4. **AES-128** encryption is feasible but doubles the encrypted payload size — acceptable for security-critical applications.
+4. **Huffman encoding** provides 50% compression but Binary struct packing outperforms it for structured numerical telemetry.
 
 ---
 
@@ -182,8 +176,9 @@ BDS-SMC provides a viable satellite communication channel for UAV rescue telemet
 | `python/decode_binary.py` | Gap 1: Binary decode + round-trip | `python decode_binary.py` |
 | `python/latency_analysis.py` | Gap 2: Latency stats (30 TX) | `python latency_analysis.py --demo` |
 | `python/field_test_logger.py` | Gap 3: Field test logger | `python field_test_logger.py --env open_sky` |
-| `python/aes_decrypt.py` | Gap 5: AES decrypt + verify | `python aes_decrypt.py --demo` |
 | `python/telemetry_compare.py` | Gap 6: All-format comparison | `python telemetry_compare.py` |
+| `python/gap2_analysis.py` | Gap 2: ANOVA + CDF + UAV error model | `python gap2_analysis.py` |
+| `python/gap3_analysis.py` | Gap 3: Chi-square + Fisher's exact | `python gap3_analysis.py` |
 
 ---
 

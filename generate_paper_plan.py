@@ -111,7 +111,7 @@ strat = simple_table([
     [Paragraph("<b>Paper 2</b>", S_BODY),
      body("Gap 1 + Gap 6"),
      body("IEEE Communications Letters"),
-     body("Payload encoding efficiency and AES security overhead for BDS-3 SMC")],
+     body("Payload encoding efficiency: Binary vs Huffman for BDS-3 SMC telemetry")],
 ], col_widths=[2*cm, 2.5*cm, 5*cm, 7.5*cm])
 story += [strat, sp(10)]
 
@@ -219,13 +219,13 @@ story += [sp(6)]
 
 story.append(simple_table([
     [Paragraph("<b>Field</b>", S_NOTE), Paragraph("<b>Detail</b>", S_NOTE)],
-    [body("Full title"),    body("Payload Encoding Efficiency and AES-128 Security Overhead "
-                                 "for BeiDou-3 Short Message Communication in UAV Rescue")],
+    [body("Full title"),    body("Payload Encoding Efficiency for BeiDou-3 Short Message "
+                                 "Communication in UAV Rescue: Binary Outperforms Huffman")],
     [body("Venue"),         body("IEEE Communications Letters")],
     [body("Impact factor"), body("4.1  |  Q1  |  Length: 5 pages IEEE two-column (Letters format)")],
     [body("Submission"),    body("Target October 2026 (after Paper 1 draft is complete)")],
-    [body("Gaps covered"),  body("Gap 1 (ASCII vs Binary encoding), Gap 5 (AES-128 overhead), "
-                                 "Gap 6 (full telemetry struct comparison)")],
+    [body("Gaps covered"),  body("Gap 1 (ASCII vs Binary encoding), "
+                                 "Gap 6 (full telemetry struct comparison: Binary vs Huffman)")],
 ], col_widths=[3.5*cm, 13.5*cm]))
 
 story += [sp(8), h2("3.1  Data Requirements (mostly already collected)")]
@@ -236,8 +236,6 @@ story.append(simple_table([
      Paragraph("<b>Status</b>", S_NOTE)],
     [body("Gap 1"), body("264 bits (ASCII) vs 64 bits (Binary) — software verified"),
      body("10 hardware TX each mode for validation"),    body("Hardware Day 1")],
-    [body("Gap 5"), body("3/3 AES round-trip verified, +100% overhead confirmed"),
-     body("10 hardware TX for stronger sample size"),    body("Hardware Day 1")],
     [body("Gap 6"), body("ASCII=368b, Binary=128b (-65.2%), Huffman=184b (-50%)"),
      body("10 hardware TX with Huffman mode"),           body("Hardware Day 1")],
 ], col_widths=[1.8*cm, 6.5*cm, 5.5*cm, 3.2*cm]))
@@ -249,9 +247,6 @@ story.append(simple_table([
      Paragraph("<b>Value</b>", S_NOTE)],
     [body("Gap 1"), body("ASCII lat/lon payload"),              body("264 bits")],
     [body("Gap 1"), body("Binary lat/lon payload"),             body("64 bits  (−75.8%, 4.12x)")],
-    [body("Gap 5"), body("Binary payload (plaintext)"),         body("64 bits")],
-    [body("Gap 5"), body("AES-128-CBC ciphertext"),             body("128 bits (+100% overhead)")],
-    [body("Gap 5"), body("Round-trip verified"),                body("3/3 messages (100%)")],
     [body("Gap 6"), body("ASCII full telemetry (7 fields)"),    body("368 bits  (baseline)")],
     [body("Gap 6"), body("Binary struct packing"),              body("128 bits (−65.2%)")],
     [body("Gap 6"), body("Dynamic Huffman coding"),             body("184 bits (−50.0%)")],
@@ -266,21 +261,19 @@ story.append(simple_table([
      Paragraph("<b>When</b>", S_NOTE)],
     [body("1"),  body("Hardware validate Gap 1: 10 ASCII + 10 Binary TX"),
      body("Hardware Day 1")],
-    [body("2"),  body("Hardware validate Gap 5: 10 AES TX"),
+    [body("2"),  body("Hardware validate Gap 6: 10 Huffman TX"),
      body("Hardware Day 1")],
-    [body("3"),  body("Hardware validate Gap 6: 10 Huffman TX"),
-     body("Hardware Day 1")],
-    [body("4"),  body("Write 5-page Letters draft (Intro, System, Results, Discussion, Conclusion)"),
+    [body("3"),  body("Write 5-page Letters draft (Intro, System, Results, Discussion, Conclusion)"),
      body("After Paper 1 draft")],
-    [body("5"),  body("Download IEEE Communications Letters template"),
+    [body("4"),  body("Download IEEE Communications Letters template"),
      body("Before writing")],
-    [body("6"),  body("Highlight the Binary-beats-Huffman finding as the key novelty"),
+    [body("5"),  body("Highlight the Binary-beats-Huffman finding as the key novelty"),
      body("Section III of letter")],
-    [body("7"),  body("Compile 15 references (shorter than Paper 1)"),
+    [body("6"),  body("Compile 15 references (shorter than Paper 1)"),
      body("Before writing")],
-    [body("8"),  body("Supervisor review"),
+    [body("7"),  body("Supervisor review"),
      body("Target Sep 2026")],
-    [body("9"),  body("Submit to IEEE Communications Letters"),
+    [body("8"),  body("Submit to IEEE Communications Letters"),
      body("Target Oct 2026")],
 ], col_widths=[0.7*cm, 11.8*cm, 5.5*cm]))
 

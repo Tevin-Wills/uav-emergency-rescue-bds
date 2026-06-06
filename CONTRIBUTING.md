@@ -7,7 +7,6 @@
 | Running Gap 1 experiments | `gap1-encoding` |
 | Running Gap 2 latency tests | `gap2-latency` |
 | Running Gap 3 field tests | `gap3-field-test` |
-| Running Gap 5 encryption | `gap5-aes` |
 | Running Gap 6 compression | `gap6-huffman` |
 | Any other fix or doc change | `fix/<short-description>` |
 
@@ -44,9 +43,9 @@ Each experiment appends rows to its CSV in `data/`. Do not delete existing rows.
 | File | Columns |
 |------|---------|
 | `gap1_compression.csv` | mode, ascii_bits, binary_bits, timestamp |
-| `gap2_latency.csv` | tx_num, t1_ms, t2_ms, t3_ms, total_ms |
-| `gap5_encryption.csv` | tx_num, plaintext_bits, ciphertext_bits, overhead_ms |
-| `gap6_telemetry.csv` | tx_num, ascii_bits, binary_bits, huffman_bits |
+| `gap2_latency.csv` | tx_num, session, weather, cloud_pct, datetime, t1, t2, t3, tx_latency_ms, decode_latency_ms, total_latency_ms |
+| `gap3_field_test.csv` | timestamp, environment, location_id, gps_lat, gps_lon, sky_obstruction_pct, weather, antenna_dir, attempt, result, latency_ms, notes |
+| `gap6_telemetry.csv` | format, bytes, bits, compression_vs_ascii_pct |
 
 ## Rules
 

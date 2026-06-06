@@ -166,7 +166,7 @@ overview = Table([
     [body("Hardware days"), body("5 days")],
     [body("Total timeline"),body("2 weeks")],
     [body("Research gaps"), body("Gap 1 (encoding), Gap 2 (latency), Gap 3 (environments), "
-                                 "Gap 5 (AES), Gap 6 (telemetry)")],
+                                 "Gap 6 (telemetry)")],
 ], colWidths=[4*cm, 13*cm])
 overview.setStyle(TableStyle([
     ("BACKGROUND",    (0,0), (-1,0),  colors.HexColor("#dce6f1")),

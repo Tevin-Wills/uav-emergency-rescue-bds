@@ -2,17 +2,16 @@
 
 ## Software Install (PC) ✅ COMPLETE
 - [x] Python 3.14 installed
-- [x] pip install pyserial pycryptodome matplotlib pandas dahuffman — all installed
+- [x] pip install pyserial matplotlib pandas dahuffman scipy reportlab fpdf2 — all installed
 - [x] Arduino IDE 1.8.19 installed
 - [x] ESP32 board package installed (China mirror: https://dl.espressif.cn/dl/package_esp32_index.json)
 - [x] XCOM V2.0 already installed
 - [x] Sketch compiles clean (287 KB, 21% flash)
 
 ## Firmware ✅ COMPLETE
-- [x] esp32_sender.ino — MODE 0 ASCII (Gap 1)
+- [x] esp32_sender.ino — MODE 0 ASCII (Gap 1 & 2 & 3)
 - [x] esp32_sender.ino — MODE 1 Binary (Gap 1)
-- [x] esp32_sender.ino — MODE 2 AES-128-CBC (Gap 5)
-- [x] esp32_sender.ino — MODE 3 Huffman (Gap 6)
+- [x] esp32_sender.ino — MODE 2 Huffman (Gap 6)
 - [x] Coordinates set: lat=30.4196, lon=120.2977 (Yuhang District, Hangzhou)
 - [x] AT command format confirmed: $CCTXM,<destID>,<content>*<CS>\r\n
 
@@ -22,8 +21,9 @@
 - [x] decode_binary.py — Gap 1 binary decode (updated format + Hangzhou coords)
 - [x] latency_analysis.py — Gap 2 latency stats
 - [x] field_test_logger.py — Gap 3 field test (fixed timeout/failure detection)
-- [x] aes_decrypt.py — Gap 5 AES decrypt (updated coords + ENC: prefix parsing)
-- [x] telemetry_compare.py — Gap 6 all-format comparison (Hangzhou coords + AES row added)
+- [x] gap2_analysis.py — Gap 2 ANOVA + CDF + UAV error model
+- [x] gap3_analysis.py — Gap 3 chi-square + Fisher's exact + Wilson CI
+- [x] telemetry_compare.py — Gap 6 all-format comparison (ASCII / Binary / Huffman)
 
 ## Lab Report ✅ COMPLETE
 - [x] Lab7_Report.md — full report template with all Gap sections and result tables
@@ -40,6 +40,5 @@
 ## Experiments (needs hardware + outdoor)
 - [ ] Gap 1 — ASCII vs Binary encoding (run both modes, record bit sizes)
 - [ ] Gap 2 — Latency measurement (30 transmissions, MODE=0, open sky)
-- [ ] Gap 3 — Field test (4 environments × 20 transmissions)
-- [ ] Gap 5 — AES-128 encryption (MODE=2, verify decryption in Python)
+- [ ] Gap 3 — Field test (4 environments × 3 locations × 20 transmissions)
 - [ ] Gap 6 — Telemetry comparison (run telemetry_compare.py, fill Lab7_Report.md table)

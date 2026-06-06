@@ -91,7 +91,7 @@ story = []
 story += [
     Spacer(1, 2*cm),
     Paragraph("BeiDou Short Message Communication", TITLE),
-    Paragraph("Payload Encoding, Satellite Transmission, and Security", SUBTITLE),
+    Paragraph("Payload Encoding and Satellite Transmission", SUBTITLE),
     Spacer(1, 0.4*cm),
     rule(),
     Spacer(1, 0.3*cm),
@@ -306,7 +306,7 @@ modes = [
      "64 bits", "Gap 1 — compression"],
     ["2", "Huffman\n(dynamic)",
      "$CCTXM,0,HUF:<hex>*CS\n(adaptive bit packing)",
-     "~40–90 bits\n(data-dependent)", "Gap 4 — compression"],
+     "~40–90 bits\n(data-dependent)", "Gap 6 — compression"],
 ]
 story += [
     tbl(modes, [1.2*cm, 2.4*cm, 5.8*cm, 3.0*cm, 4.0*cm]),
@@ -400,9 +400,9 @@ closure = [
     ["Gap 3 — No RDSS success\nrate across environments",
      "ADDRESSED",
      "field_test_logger.py logs 4 environments ×\n20 transmissions with success/fail/latency."],
-    ["Gap 4 — No structured\ntelemetry compression",
+    ["Gap 6 — No structured\ntelemetry compression",
      "CLOSED",
-     "telemetry_compare.py quantifies all three\nformats for the full 7-field telemetry struct."],
+     "telemetry_compare.py quantifies all three\nformats for the full 7-field telemetry struct.\nKey finding: Binary outperforms Huffman for numerical data."],
 ]
 story += [
     tbl(closure, [3.8*cm, 2.0*cm, 9.5*cm]),
@@ -416,8 +416,8 @@ story += [
     Paragraph(
         "This report has identified the absence of a standardised payload encoding scheme "
         "for BDS-3 Short Message Communication as a critical gap in the literature, "
-        "demonstrated by the 69% payload waste of default ASCII encoding and the "
-        "plaintext security vulnerability of the standard channel.",
+        "demonstrated by the 69% payload waste of default ASCII encoding relative to "
+        "binary fixed-point encoding within the same constrained satellite bit budget.",
         BODY),
     Paragraph(
         "The proposed multi-mode encoding framework — implemented as three selectable modes "
