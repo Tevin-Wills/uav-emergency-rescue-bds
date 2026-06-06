@@ -265,15 +265,15 @@
           <td class="gap-title">No comparative framework for telemetry encoding schemes across BDS-3 SMC payloads</td>
           <td>
             UAV rescue telemetry requires <span class="num-highlight">7 fields</span> (lat, lon, alt, battery, mode, flags, timestamp) in one message.<br>
-            No published work compares ASCII, binary, Huffman, and AES for this payload &mdash; no empirical encoding selection guidance exists.
+            No published work compares ASCII, binary, and Huffman for this payload &mdash; no empirical encoding selection guidance exists.
           </td>
           <td>
-            telemetry_compare.py: all <span class="num-highlight">4 formats</span> for 7-field struct.<br>
+            telemetry_compare.py: all <span class="num-highlight">3 formats</span> for 7-field struct.<br>
             Measure bits, compression ratio vs ASCII, GSMC single-message compatibility.<br>
             Output: <span class="tag green">gap6_telemetry.csv</span>
           </td>
           <td>
-            <span class="tag">Method</span> Multi-format empirical comparison: same 7-field struct in ASCII / Binary / Huffman / AES-128. Bit counts measured; GSMC <span class="num-highlight">560-bit</span> fit assessed in Python.<br><br>
+            <span class="tag">Method</span> Multi-format empirical comparison: same 7-field struct in ASCII / Binary / Huffman. Bit counts measured; GSMC <span class="num-highlight">560-bit</span> fit assessed in Python.<br><br>
             <span class="tag green">Why</span> Identical data eliminates confounds. Python mirrors ESP32 firmware &mdash; directly comparable to hardware measurements.
           </td>
           <td>

@@ -15,7 +15,7 @@ from reportlab.platypus import (
 from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT
 import datetime
 
-OUTPUT = "BDS_SMC2_Research_Brief.pdf"
+OUTPUT = "BDS-SMC2_Brief.pdf"
 W, H = A4
 
 DARK   = colors.HexColor("#1a3a5c")
@@ -221,7 +221,7 @@ limitations = [
      "of the time in open sky but only 20% of the time in a forest provides "
      "false confidence — and a drone dispatched on a failed transmission will "
      "navigate to the wrong location or not at all."),
-    (colors.HexColor("#6a3a8c"), "Gap 4", "No Encoding Standard for Integration",
+    (colors.HexColor("#6a3a8c"), "Gap 6", "No Encoding Standard for Integration",
      "Without a standardised multi-field telemetry encoding, every BDS-3 SMC "
      "integration must implement its own ad hoc format. Drone ground control "
      "stations, rescue coordination centres, and terminal manufacturers cannot "
@@ -355,7 +355,7 @@ story += [
     Spacer(1, 0.2*cm),
     highlight_box(
         "If BDS-3 SMC is to become a reliable backbone for drone-assisted rescue, "
-        "its payload efficiency, transmission reliability, latency, and security "
+        "its payload efficiency, transmission reliability, and latency "
         "must be measured and standardised — not assumed. This project does that, "
         "for the first time, on real satellite hardware.",
         colors.HexColor("#eef2f9"), DARK,
