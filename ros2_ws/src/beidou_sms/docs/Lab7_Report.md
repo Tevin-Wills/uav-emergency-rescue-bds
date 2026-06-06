@@ -77,13 +77,12 @@ $CCTXM,<destID>,<payload>*<XOR_checksum>\r\n
 
 **Hypothesis:** Binary fixed-point encoding of lat/lon uses significantly fewer bits than ASCII.
 
-| Encoding | Payload Size | Bits |
-|----------|-------------|------|
-| ASCII (`LAT:30.4196,LON:120.2977`) | ~26 bytes | ~208 bits |
-| Binary (two int32, big-endian) | 8 bytes | 64 bits |
-| **Reduction** | | **~69%** |
+| Encoding | Payload Size | Bits | Reduction vs ASCII |
+|----------|-------------|------|--------------------|
+| ASCII (`$CCTXM,0,LAT:30.4196,LON:120.2977`) | 33 bytes | 264 bits | baseline |
+| Binary (two int32, big-endian) | 8 bytes | 64 bits | **75.8% (4.12×)** |
 
-*Run `python decode_ascii.py` and `python decode_binary.py` to reproduce.*
+*Verified by `decode_ascii.py` (264 bits avg) and `decode_binary.py` (64 bits fixed, round-trip OK).*
 
 **Raw data:** `../data/gap1_compression.csv`
 
@@ -140,8 +139,10 @@ $CCTXM,<destID>,<payload>*<XOR_checksum>\r\n
 | Encryption overhead | 64 bits (+100%) |
 | Key size | 128 bits |
 | Mode | CBC with fixed IV |
+| Round-trip verified | True (3/3 messages decoded correctly) |
+| Lat/Lon precision preserved | Yes (4 decimal places) |
 
-*Run `python aes_decrypt.py --demo` to verify round-trip encryption.*
+*Verified by `gap5_encryption.csv` — all 3 test messages encrypted and decrypted correctly.*
 
 **Raw data:** `../data/gap5_encryption.csv`
 
