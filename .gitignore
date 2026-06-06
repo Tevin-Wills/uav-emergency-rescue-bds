@@ -1,0 +1,22 @@
+# Arduino build artifacts
+firmware/esp32_sender/build/
+*.bin
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+.env
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Generated figures (reproducible via generate_figures.py)
+results/figures/
+figures/
+
+# Editor
+.vscode/
+*.swp
