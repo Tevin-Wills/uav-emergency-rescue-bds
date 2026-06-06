@@ -95,10 +95,14 @@ $CCTXM,<destID>,<payload>*<XOR_checksum>\r\n
 
 | Metric | Value |
 |--------|-------|
-| Mean TX latency (ms) | *(fill after experiment)* |
-| Std Dev (ms) | *(fill after experiment)* |
-| Min (ms) | *(fill after experiment)* |
-| Max (ms) | *(fill after experiment)* |
+| Mean TX latency (ms) | 2582.9 |
+| Std Dev (ms) | 1093.7 |
+| Min (ms) | 1070 |
+| Max (ms) | 4488 |
+| Median (ms) | 2570 |
+| 95th percentile (ms) | 4484 |
+| Decode overhead (ms) | 8.4 |
+| N (transmissions) | 30 |
 
 *Run `python latency_analysis.py --input ../data/raw_log.csv` to compute.*  
 *Run `python latency_analysis.py --demo` to test with synthetic data.*
@@ -149,12 +153,12 @@ $CCTXM,<destID>,<payload>*<XOR_checksum>\r\n
 
 | Format | Bytes | Bits | vs ASCII | vs Binary |
 |--------|-------|------|----------|-----------|
-| ASCII | | | baseline | |
-| Binary | | | | baseline |
-| Huffman | | | | |
-| AES-128 | | | | |
+| ASCII | 46 | 368 | baseline | +240 bits |
+| Binary | 16 | 128 | -240 (65.2%) | baseline |
+| Huffman | 23 | 184 | -184 (50.0%) | +56 bits |
+| AES-128 | 32 | 256 | -112 (30.4%) | +128 bits (+100%) |
 
-*Run `python telemetry_compare.py` to compute all values and fill this table.*
+*Computed by `python telemetry_compare.py` — Hangzhou coords (30.4196, 120.2977), full 7-field struct.*
 
 **Raw data:** `../data/gap6_telemetry.csv`
 
