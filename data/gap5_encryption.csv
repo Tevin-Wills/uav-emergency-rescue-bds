@@ -1,4 +1,0 @@
-lat,lon,lat_decrypted,lon_decrypted,payload_bits,encrypted_bits,overhead_bits,verified
--25.7479,28.2293,-25.7479,28.2293,64,128,64,True
--33.9249,18.4241,-33.9249,18.4241,64,128,64,True
--26.2041,28.0473,-26.2041,28.0473,64,128,64,True

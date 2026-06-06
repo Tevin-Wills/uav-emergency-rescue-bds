@@ -10,6 +10,7 @@ Usage:
 
 import argparse
 import csv
+import os
 
 SAMPLE_MESSAGES = [
     "$CCTXM,0,LAT:30.4196,LON:120.2977*XX",
@@ -58,7 +59,7 @@ def main():
         print(f"[RESULT] Binary alternative             : 64 bits (two int32)")
         print(f"[RESULT] Compression ratio              : {avg_bits/64:.2f}x")
 
-        out = "../data/gap1_compression.csv"
+        out = os.path.join(os.path.dirname(__file__), "..", "data", "gap1_compression.csv")
         with open(out, "w", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=["message", "lat", "lon", "bits"])
             writer.writeheader()

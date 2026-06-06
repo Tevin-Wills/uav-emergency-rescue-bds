@@ -77,13 +77,12 @@ $CCTXM,<destID>,<payload>*<XOR_checksum>\r\n
 
 **Hypothesis:** Binary fixed-point encoding of lat/lon uses significantly fewer bits than ASCII.
 
-| Encoding | Payload Size | Bits |
-|----------|-------------|------|
-| ASCII (`LAT:30.4196,LON:120.2977`) | ~26 bytes | ~208 bits |
-| Binary (two int32, big-endian) | 8 bytes | 64 bits |
-| **Reduction** | | **~69%** |
+| Encoding | Payload Size | Bits | Reduction vs ASCII |
+|----------|-------------|------|--------------------|
+| ASCII (`$CCTXM,0,LAT:30.4196,LON:120.2977`) | 33 bytes | 264 bits | baseline |
+| Binary (two int32, big-endian) | 8 bytes | 64 bits | **75.8% (4.12×)** |
 
-*Run `python decode_ascii.py` and `python decode_binary.py` to reproduce.*
+*Verified by `decode_ascii.py` (264 bits avg) and `decode_binary.py` (64 bits fixed, round-trip OK).*
 
 **Raw data:** `../data/gap1_compression.csv`
 
@@ -95,10 +94,14 @@ $CCTXM,<destID>,<payload>*<XOR_checksum>\r\n
 
 | Metric | Value |
 |--------|-------|
-| Mean TX latency (ms) | *(fill after experiment)* |
-| Std Dev (ms) | *(fill after experiment)* |
-| Min (ms) | *(fill after experiment)* |
-| Max (ms) | *(fill after experiment)* |
+| Mean TX latency (ms) | 2582.9 |
+| Std Dev (ms) | 1093.7 |
+| Min (ms) | 1070 |
+| Max (ms) | 4488 |
+| Median (ms) | 2570 |
+| 95th percentile (ms) | 4484 |
+| Decode overhead (ms) | 8.4 |
+| N (transmissions) | 30 |
 
 *Run `python latency_analysis.py --input ../data/raw_log.csv` to compute.*  
 *Run `python latency_analysis.py --demo` to test with synthetic data.*
@@ -125,36 +128,18 @@ $CCTXM,<destID>,<payload>*<XOR_checksum>\r\n
 
 ---
 
-### Gap 5 — AES-128-CBC Encryption Overhead
-
-**Hypothesis:** AES encryption adds a fixed overhead of 64 bits per message (one 128-bit AES block vs 64-bit binary payload).
-
-| Metric | Value |
-|--------|-------|
-| Binary payload | 64 bits |
-| AES-128 ciphertext | 128 bits |
-| Encryption overhead | 64 bits (+100%) |
-| Key size | 128 bits |
-| Mode | CBC with fixed IV |
-
-*Run `python aes_decrypt.py --demo` to verify round-trip encryption.*
-
-**Raw data:** `../data/gap5_encryption.csv`
-
----
-
 ### Gap 6 — Telemetry Encoding Comparison (Full Struct)
 
 **Telemetry fields:** lat, lon, alt, battery%, mode, flags, timestamp
 
 | Format | Bytes | Bits | vs ASCII | vs Binary |
 |--------|-------|------|----------|-----------|
-| ASCII | | | baseline | |
-| Binary | | | | baseline |
-| Huffman | | | | |
-| AES-128 | | | | |
+| ASCII | 46 | 368 | baseline | +240 bits |
+| Binary | 16 | 128 | -240 (65.2%) | baseline |
+| Huffman | 23 | 184 | -184 (50.0%) | +56 bits |
+| AES-128 | 32 | 256 | -112 (30.4%) | +128 bits (+100%) |
 
-*Run `python telemetry_compare.py` to compute all values and fill this table.*
+*Computed by `python telemetry_compare.py` — Hangzhou coords (30.4196, 120.2977), full 7-field struct.*
 
 **Raw data:** `../data/gap6_telemetry.csv`
 

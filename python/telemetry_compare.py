@@ -12,6 +12,7 @@ Usage:
 import struct
 import csv
 import argparse
+import os
 from dahuffman import HuffmanCodec
 
 # --- Sample telemetry payload — Yuhang District, Hangzhou ---
@@ -71,7 +72,7 @@ def decode_huffman(encoded: bytes, codec) -> dict:
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--out", default="../data/gap6_telemetry.csv")
+    parser.add_argument("--out", default=os.path.join(os.path.dirname(__file__), "..", "data", "gap6_telemetry.csv"))
     args = parser.parse_args()
 
     t = TELEMETRY

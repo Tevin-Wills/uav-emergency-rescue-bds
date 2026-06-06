@@ -12,6 +12,7 @@ Usage:
 
 import csv
 import argparse
+import os
 import statistics
 import time
 from datetime import datetime
@@ -78,7 +79,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", default=None)
     parser.add_argument("--demo", action="store_true")
-    parser.add_argument("--out", default="../data/gap2_latency.csv")
+    parser.add_argument("--out", default=os.path.join(os.path.dirname(__file__), "..", "data", "gap2_latency.csv"))
     args = parser.parse_args()
 
     if args.demo:
