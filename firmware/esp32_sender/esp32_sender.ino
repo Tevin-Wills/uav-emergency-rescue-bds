@@ -26,6 +26,12 @@ float lon = 120.2977;
 unsigned long lastSendTime = 0;
 int sendCount = 0;
 
+// BDS response buffering for T3 detection
+static char  bdsBuf[128];
+static int   bdsBufLen   = 0;
+static bool  t2Seen      = false;
+static int   burstCount  = 0;
+
 // --- Gap 6: Huffman tree structures ---
 #define HUFF_MAX_NODES 63
 struct HNode { int freq; int8_t ch; int16_t left, right; };
@@ -58,6 +64,10 @@ void loop() {
     lastSendTime = millis();
     sendCount++;
 
+    t2Seen = false;
+    burstCount = 0;
+    bdsBufLen = 0;
+
     unsigned long t1 = millis();
     Serial.print("[T1] "); Serial.println(t1);
 
@@ -68,8 +78,46 @@ void loop() {
     Serial.print("[TX#] "); Serial.println(sendCount);
   }
 
-  // Transparent serial bridge — forward BDS module responses to XCOM
-  while (BDSSerial.available()) Serial.write(BDSSerial.read());
+  // Buffered BDS response reader — detects T2 and T3 markers
+  while (BDSSerial.available()) {
+    char c = BDSSerial.read();
+    Serial.write(c); // still forward raw bytes for XCOM
+
+    // Buffer printable ASCII only
+    if (c >= 32 && c < 127 && bdsBufLen < 126) {
+      bdsBuf[bdsBufLen++] = c;
+    }
+
+    // Process on newline or buffer full
+    if (c == '\n' || c == '\r' || bdsBufLen >= 126) {
+      bdsBuf[bdsBufLen] = '\0';
+      String line = String(bdsBuf);
+      bdsBufLen = 0;
+
+      if (line.length() > 2) {
+        burstCount++;
+
+        // T2: module accepted the command
+        if (!t2Seen && (line.indexOf("OK") >= 0 || line.indexOf("$CC") >= 0 ||
+                        line.indexOf("CCTXM") >= 0)) {
+          Serial.println("\n[T2] module-ack");
+          t2Seen = true;
+        }
+
+        // T3: satellite delivered — second data burst from BDS module
+        if (t2Seen && (line.indexOf("RDTXA") >= 0 || line.indexOf("RDTX") >= 0 ||
+                       line.indexOf("Send") >= 0   || line.indexOf("0500") >= 0 ||
+                       line.indexOf("0100") >= 0   || burstCount >= 3)) {
+          Serial.println("\n[T3] Send Success");
+          digitalWrite(GREEN_LED, HIGH);
+          delay(300);
+          digitalWrite(GREEN_LED, LOW);
+          t2Seen = false;
+          burstCount = 0;
+        }
+      }
+    }
+  }
 }
 
 // -------------------------------------------------------------------

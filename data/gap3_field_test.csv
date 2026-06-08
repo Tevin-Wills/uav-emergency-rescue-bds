@@ -1,1 +1,38 @@
 timestamp,environment,location_id,gps_lat,gps_lon,sky_obstruction_pct,weather,antenna_dir,attempt,result,latency_ms,notes
+2026-06-08T12:01:10,open_sky,OS-1,30.4196,120.2977,15,clear,south,1,timeout,,T3 detection bug — firmware fix pending; logger could not detect satellite ACK
+2026-06-08T12:01:20,open_sky,OS-1,30.4196,120.2977,15,clear,south,2,timeout,,T3 detection bug — firmware fix pending; logger could not detect satellite ACK
+2026-06-08T12:01:30,open_sky,OS-1,30.4196,120.2977,15,clear,south,3,timeout,,T3 detection bug — firmware fix pending; logger could not detect satellite ACK
+2026-06-08T12:01:40,open_sky,OS-1,30.4196,120.2977,15,clear,south,4,timeout,,T3 detection bug — firmware fix pending; logger could not detect satellite ACK
+2026-06-08T12:01:50,open_sky,OS-1,30.4196,120.2977,15,clear,south,5,timeout,,T3 detection bug — firmware fix pending; logger could not detect satellite ACK
+2026-06-08T12:02:00,open_sky,OS-1,30.4196,120.2977,15,clear,south,6,timeout,,T3 detection bug — firmware fix pending; logger could not detect satellite ACK
+2026-06-08T12:02:10,open_sky,OS-1,30.4196,120.2977,15,clear,south,7,timeout,,T3 detection bug — firmware fix pending; logger could not detect satellite ACK
+2026-06-08T12:02:20,open_sky,OS-1,30.4196,120.2977,15,clear,south,8,timeout,,T3 detection bug — firmware fix pending; logger could not detect satellite ACK
+2026-06-08T12:02:30,open_sky,OS-1,30.4196,120.2977,15,clear,south,9,timeout,,T3 detection bug — firmware fix pending; logger could not detect satellite ACK
+2026-06-08T12:02:40,open_sky,OS-1,30.4196,120.2977,15,clear,south,10,success,,portal-confirmed delivery; latency_ms not captured (T3 detection bug — firmware fix pending)
+2026-06-08T12:02:50,open_sky,OS-1,30.4196,120.2977,15,clear,south,11,timeout,,T3 detection bug — firmware fix pending; logger could not detect satellite ACK
+2026-06-08T12:03:00,open_sky,OS-1,30.4196,120.2977,15,clear,south,12,timeout,,T3 detection bug — firmware fix pending; logger could not detect satellite ACK
+2026-06-08T12:03:10,open_sky,OS-1,30.4196,120.2977,15,clear,south,13,timeout,,T3 detection bug — firmware fix pending; logger could not detect satellite ACK
+2026-06-08T12:03:20,open_sky,OS-1,30.4196,120.2977,15,clear,south,14,timeout,,T3 detection bug — firmware fix pending; logger could not detect satellite ACK
+2026-06-08T12:03:30,open_sky,OS-1,30.4196,120.2977,15,clear,south,15,timeout,,T3 detection bug — firmware fix pending; logger could not detect satellite ACK
+2026-06-08T12:03:40,open_sky,OS-1,30.4196,120.2977,15,clear,south,16,timeout,,T3 detection bug — firmware fix pending; logger could not detect satellite ACK
+2026-06-08T12:03:50,open_sky,OS-1,30.4196,120.2977,15,clear,south,17,timeout,,T3 detection bug — firmware fix pending; logger could not detect satellite ACK
+2026-06-08T12:04:00,open_sky,OS-1,30.4196,120.2977,15,clear,south,18,timeout,,T3 detection bug — firmware fix pending; logger could not detect satellite ACK
+2026-06-08T12:04:10,open_sky,OS-1,30.4196,120.2977,15,clear,south,19,timeout,,T3 detection bug — firmware fix pending; logger could not detect satellite ACK
+2026-06-08T12:04:20,open_sky,OS-1,30.4196,120.2977,15,clear,south,20,success,,portal-confirmed delivery; latency_ms not captured (T3 detection bug — firmware fix pending)
+2026-06-08T12:04:30,open_sky,OS-1,30.4196,120.2977,15,clear,south,21,timeout,,T3 detection bug — firmware fix pending; logger could not detect satellite ACK
+2026-06-08T12:04:40,open_sky,OS-1,30.4196,120.2977,15,clear,south,22,timeout,,T3 detection bug — firmware fix pending; logger could not detect satellite ACK
+2026-06-08T12:04:50,open_sky,OS-1,30.4196,120.2977,15,clear,south,23,timeout,,T3 detection bug — firmware fix pending; logger could not detect satellite ACK
+2026-06-08T12:05:00,open_sky,OS-1,30.4196,120.2977,15,clear,south,24,timeout,,T3 detection bug — firmware fix pending; logger could not detect satellite ACK
+2026-06-08T12:05:10,open_sky,OS-1,30.4196,120.2977,15,clear,south,25,timeout,,T3 detection bug — firmware fix pending; logger could not detect satellite ACK
+2026-06-08T12:05:20,open_sky,OS-1,30.4196,120.2977,15,clear,south,26,timeout,,T3 detection bug — firmware fix pending; logger could not detect satellite ACK
+2026-06-08T12:05:30,open_sky,OS-1,30.4196,120.2977,15,clear,south,27,timeout,,T3 detection bug — firmware fix pending; logger could not detect satellite ACK
+2026-06-08T12:05:40,open_sky,OS-1,30.4196,120.2977,15,clear,south,28,timeout,,T3 detection bug — firmware fix pending; logger could not detect satellite ACK
+2026-06-08T12:05:50,open_sky,OS-1,30.4196,120.2977,15,clear,south,29,timeout,,T3 detection bug — firmware fix pending; logger could not detect satellite ACK
+2026-06-08T12:06:00,open_sky,OS-1,30.4196,120.2977,15,clear,south,30,success,,portal-confirmed delivery; latency_ms not captured (T3 detection bug — firmware fix pending)
+2026-06-08T12:06:10,open_sky,OS-1,30.4196,120.2977,15,clear,south,31,timeout,,T3 detection bug — firmware fix pending; logger could not detect satellite ACK
+2026-06-08T12:06:20,open_sky,OS-1,30.4196,120.2977,15,clear,south,32,timeout,,T3 detection bug — firmware fix pending; logger could not detect satellite ACK
+2026-06-08T12:06:30,open_sky,OS-1,30.4196,120.2977,15,clear,south,33,timeout,,T3 detection bug — firmware fix pending; logger could not detect satellite ACK
+2026-06-08T12:06:40,open_sky,OS-1,30.4196,120.2977,15,clear,south,34,timeout,,T3 detection bug — firmware fix pending; logger could not detect satellite ACK
+2026-06-08T12:06:50,open_sky,OS-1,30.4196,120.2977,15,clear,south,35,timeout,,T3 detection bug — firmware fix pending; logger could not detect satellite ACK
+2026-06-08T12:07:00,open_sky,OS-1,30.4196,120.2977,15,clear,south,36,timeout,,T3 detection bug — firmware fix pending; logger could not detect satellite ACK
+2026-06-08T12:07:10,open_sky,OS-1,30.4196,120.2977,15,clear,south,37,success,,portal-confirmed delivery; latency_ms not captured (T3 detection bug — firmware fix pending)
