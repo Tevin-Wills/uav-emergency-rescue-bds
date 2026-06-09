@@ -1,0 +1,50 @@
+target_detection_node:
+  ros__parameters:
+    model_path: ""
+    confidence_threshold: 0.25
+    process_every_n_frames: 1
+
+    rgb_topic: "/camera/image_raw"
+    depth_topic: "/depth_camera"
+    local_position_topic: "/fmu/out/vehicle_local_position"
+    rtk_position_topic: "/uav/rtk_position"
+    rtk_status_topic: "/uav/rtk_status"
+    mission_status_topic: "/mission/status"
+
+    active_without_mission_status: true
+    active_mission_phases:
+      - "IN_FLIGHT"
+      - "TARGET_ACQUIRED"
+      - "LANDING"
+
+    max_image_skew_sec: 0.35
+    depth_timeout_sec: 0.75
+    pose_timeout_sec: 1.50
+    require_local_pose: true
+    publish_frame_id: "px4_local_enu"
+
+    # PX4 Gazebo Oak-D Lite depthlight defaults.
+    rgb_width: 640
+    rgb_height: 360
+    depth_width: 320
+    depth_height: 240
+    rgb_horizontal_fov_rad: 1.204
+    camera_mount_x_forward_m: 0.12
+    camera_mount_y_left_m: 0.03
+    camera_mount_z_up_m: 0.242
+
+    roi_x_margin_fraction: 0.30
+    roi_y_start_fraction: 0.30
+    roi_y_end_fraction: 0.85
+    min_depth_m: 0.20
+    max_depth_m: 19.10
+    min_depth_valid_ratio: 0.05
+
+    track_iou_threshold: 0.25
+    track_max_missing: 12
+    track_position_distance_m: 4.0
+
+    enable_jsonl_log: true
+    enable_screenshots: true
+    screenshot_interval_sec: 10.0
+    results_root: ""
