@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BDS-SMC2 Gap Analysis Slide</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: #1a1a2e;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 10px;
+  }
+
+  .slide {
+    width: 1280px;
+    height: 720px;
+    background: #ffffff;
+    border-radius: 6px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+
+  /* HEADER */
+  .header {
+    background: linear-gradient(135deg, #003087 0%, #0057b8 100%);
+    padding: 10px 24px 8px 24px;
+    flex-shrink: 0;
+  }
+  .header h1 {
+    color: #ffffff;
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+  }
+  .header p {
+    color: #a8c8f0;
+    font-size: 10px;
+    margin-top: 2px;
+    letter-spacing: 0.4px;
+  }
+
+  /* TABLE WRAPPER */
+  .table-wrap {
+    flex: 1;
+    padding: 8px 14px 6px 14px;
+    overflow: hidden;
+  }
+
+  table {
+    width: 100%;
+    height: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+
+  /* COLUMN WIDTHS */
+  col.c0 { width: 3.5%; }
+  col.c1 { width: 13%; }
+  col.c2 { width: 18%; }
+  col.c3 { width: 16%; }
+  col.c4 { width: 22%; }
+  col.c5 { width: 27.5%; }
+
+  /* HEADER ROW */
+  thead tr th {
+    background: #003087;
+    color: #ffffff;
+    font-size: 8.5px;
+    font-weight: 700;
+    text-align: center;
+    padding: 5px 4px;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    border: 1px solid #0057b8;
+  }
+
+  /* BODY ROWS */
+  tbody tr { height: 25%; }
+
+  tbody tr:nth-child(odd)  { background: #f4f7fc; }
+  tbody tr:nth-child(even) { background: #ffffff; }
+
+  tbody tr:hover { background: #e8f0fb; }
+
+  tbody td {
+    vertical-align: top;
+    padding: 5px 5px;
+    font-size: 7.8px;
+    line-height: 1.38;
+    border: 1px solid #d0daea;
+    color: #1a1a2e;
+  }
+
+  /* GAP NUMBER CELL */
+  td.num {
+    text-align: center;
+    font-weight: 800;
+    font-size: 13px;
+    color: #003087;
+    vertical-align: middle;
+    background: #dce8f7;
+    border-left: 3px solid #003087;
+  }
+
+  /* GAP TITLE */
+  td.gap-title {
+    font-weight: 700;
+    font-size: 8px;
+    color: #003087;
+    line-height: 1.4;
+  }
+
+  /* KEYWORD TAGS */
+  .tag {
+    display: inline-block;
+    background: #003087;
+    color: #fff;
+    font-size: 6.5px;
+    font-weight: 700;
+    padding: 1px 4px;
+    border-radius: 2px;
+    margin-bottom: 2px;
+    letter-spacing: 0.3px;
+  }
+  .tag.green  { background: #1a7a4a; }
+  .tag.orange { background: #b85c00; }
+  .tag.red    { background: #8b0000; }
+
+  /* PROVES / REFUTES */
+  .proves  { color: #1a7a4a; font-weight: 700; }
+  .refutes { color: #8b0000; font-weight: 700; }
+
+  /* KEY NUMBERS */
+  .num-highlight {
+    font-weight: 700;
+    color: #003087;
+  }
+
+  /* FOOTER */
+  .footer {
+    background: #003087;
+    padding: 4px 24px;
+    color: #a8c8f0;
+    font-size: 7.5px;
+    letter-spacing: 0.3px;
+    flex-shrink: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+</style>
+</head>
+<body>
+<div class="slide">
+
+  <!-- HEADER -->
+  <div class="header">
+    <h1>BeiDou Short Message Communication &mdash; Gap Analysis</h1>
+    <p>BDS-SMC2 UAV Rescue System &nbsp;|&nbsp; Lab 7: BeiDou Short Message Communication &nbsp;|&nbsp; Yuhang District, Hangzhou, China &nbsp;|&nbsp; June 2026</p>
+  </div>
+
+  <!-- TABLE -->
+  <div class="table-wrap">
+    <table>
+      <colgroup>
+        <col class="c0"><col class="c1"><col class="c2"><col class="c3"><col class="c4"><col class="c5">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Research Gap</th>
+          <th>Why It Is a Problem</th>
+          <th>Proposed Solution</th>
+          <th>Method Used &amp; Why Chosen</th>
+          <th>What It Proves / Refutes</th>
+        </tr>
+      </thead>
+      <tbody>
+
+        <!-- ROW 1 -->
+        <tr>
+          <td class="num">1</td>
+          <td class="gap-title">No standardised coordinate encoding for BDS-3 SMC payloads</td>
+          <td>
+            ASCII: <span class="num-highlight">152–208 bits</span> for data needing only <span class="num-highlight">64 bits</span> &mdash; a <span class="num-highlight">69% waste</span>.<br>
+            Full telemetry struct exceeds GSMC <span class="num-highlight">560-bit</span> global limit, forcing fragmentation with no native reassembly in BDS protocol.
+          </td>
+          <td>
+            ESP32 three-mode implementation:<br>
+            <span class="tag">MODE 0</span> ASCII baseline<br>
+            <span class="tag green">MODE 1</span> Binary 64-bit fixed-point<br>
+            <span class="tag orange">MODE 3</span> Dynamic Huffman ~48 bits<br>
+            Python decoders verify each format independently.
+          </td>
+          <td>
+            <span class="tag">Method</span> Comparative encoding experiment: same coordinate transmitted in all 3 modes; bit count recorded from Serial Monitor.<br><br>
+            <span class="tag green">Why</span> Direct hardware measurement &gt; theoretical estimation; real compression ratio on live BDS-3 hardware.
+          </td>
+          <td>
+            <span class="proves">Proves:</span> Binary fixed-point reduces BDS-3 coordinate payload by <span class="num-highlight">&ge;60%</span> vs ASCII &mdash; full telemetry feasible inside GSMC 560-bit limit in a single message.<br><br>
+            <span class="refutes">Refutes:</span> Assumption that ASCII is sufficient for BDS-3 SMC under global GSMC coverage.
+          </td>
+        </tr>
+
+        <!-- ROW 2 -->
+        <tr>
+          <td class="num">2</td>
+          <td class="gap-title">End-to-end latency of BDS-SMC &rarr; software &rarr; UAV chain is uncharacterised</td>
+          <td>
+            No study covers full chain: ESP32 &rarr; BDS module &rarr; GEO satellite &rarr; GCC &rarr; web platform &rarr; UAV GCS.<br>
+            Without latency budget, impossible to confirm BDS-3 SMC is fast enough for moving survivor (drift <span class="num-highlight">&gt;0.5 m/s</span>).
+          </td>
+          <td>
+            Instrument full chain:<br>
+            <span class="tag">T1</span> ESP32 firmware send marker<br>
+            <span class="tag green">T2</span> PC via serial_logger.py<br>
+            <span class="tag orange">T3</span> Web platform receipt<br>
+            Run <span class="num-highlight">n=30</span> transmissions; compute mean, std dev, min, max.
+          </td>
+          <td>
+            <span class="tag">Method</span> Repeated timestamped logging; n=30, 10 s intervals; mean, std dev, min, max for TX and total latency.<br><br>
+            <span class="tag green">Why</span> n=30 satisfies CLT for mean estimation. Timestamps at both ends eliminate clock ambiguity.
+          </td>
+          <td>
+            <span class="proves">Proves:</span> First empirical end-to-end BDS-3 SMC latency characterisation. Determines if <span class="num-highlight">~1–2 s</span> round-trip supports UAV waypoint updates to a moving survivor.<br><br>
+            <span class="refutes">Refutes:</span> Assumption that BDS-3 total latency is knowable from individual link studies alone.
+          </td>
+        </tr>
+
+        <!-- ROW 3 -->
+        <tr>
+          <td class="num">3</td>
+          <td class="gap-title">No empirical RDSS success-rate study across rescue environments</td>
+          <td>
+            GEO elevation <span class="num-highlight">38–52°</span> from Hangzhou; forests, urban canyons, and indoors block LOS.<br>
+            Probability of a successful BDS-3 SMC cycle in obstructed terrain is empirically unknown.
+          </td>
+          <td>
+            Structured field test:<br>
+            <span class="num-highlight">4 environments</span> (open sky, light canopy, urban canyon, indoor)<br>
+            &times; <span class="num-highlight">20 transmissions</span> each = <span class="num-highlight">80 total</span><br>
+            Log success, fail, latency per attempt. Compute success rate with <span class="num-highlight">95% CI</span>.
+          </td>
+          <td>
+            <span class="tag">Method</span> Controlled repeated-measures field experiment. field_test_logger.py auto-detects [TX#] markers; logs success/fail/latency. 95% CI per environment.<br><br>
+            <span class="tag green">Why</span> 20 samples/environment gives meaningful CIs; 4 environments span real rescue scenarios; repetition isolates environment as the independent variable.
+          </td>
+          <td>
+            <span class="proves">Proves:</span> Whether environment significantly affects BDS-3 RSMC success rate. First empirical BDS-3 SMC acquisition dataset in terrain-obstructed rescue scenarios.<br><br>
+            <span class="refutes">Refutes:</span> Springer (2023) gap &mdash; RDSS uplink success rate in obstructed terrain was unknown and unstudied.
+          </td>
+        </tr>
+
+        <!-- ROW 4 -->
+        <tr>
+          <td class="num">4</td>
+          <td class="gap-title">No comparative framework for telemetry encoding schemes across BDS-3 SMC payloads</td>
+          <td>
+            UAV rescue telemetry requires <span class="num-highlight">7 fields</span> (lat, lon, alt, battery, mode, flags, timestamp) in one message.<br>
+            No published work compares ASCII, binary, and Huffman for this payload &mdash; no empirical encoding selection guidance exists.
+          </td>
+          <td>
+            telemetry_compare.py: all <span class="num-highlight">3 formats</span> for 7-field struct.<br>
+            Measure bits, compression ratio vs ASCII, GSMC single-message compatibility.<br>
+            Output: <span class="tag green">gap6_telemetry.csv</span>
+          </td>
+          <td>
+            <span class="tag">Method</span> Multi-format empirical comparison: same 7-field struct in ASCII / Binary / Huffman. Bit counts measured; GSMC <span class="num-highlight">560-bit</span> fit assessed in Python.<br><br>
+            <span class="tag green">Why</span> Identical data eliminates confounds. Python mirrors ESP32 firmware &mdash; directly comparable to hardware measurements.
+          </td>
+          <td>
+            <span class="proves">Proves:</span> Which encoding scheme best balances data density, GSMC compatibility, and implementation complexity for full UAV rescue telemetry.<br><br>
+            <span class="refutes">Refutes:</span> Implicit assumption that ASCII is adequate for multi-field BDS-3 SMC telemetry under global GSMC constraints.
+          </td>
+        </tr>
+
+      </tbody>
+    </table>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <span>BDS-SMC2 UAV Rescue System &nbsp;|&nbsp; Lab 7: BeiDou Short Message Communication</span>
+    <span>Yuhang District, Hangzhou, China &nbsp;|&nbsp; June 2026</span>
+  </div>
+
+</div>
+</body>
+</html>
