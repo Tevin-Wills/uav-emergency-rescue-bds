@@ -98,6 +98,14 @@ class PathPlanningNode(Node):
         self.create_subscription(
             EmergencyCoordinate, "/target/emergency_coordinate", self._on_distress, latched)
         self.create_subscription(NavSatFix, "/uav/rtk_position", self._on_rtk, 10)
+        # C2: route to the real goal. /mission/waypoints is latched (TRANSIENT_LOCAL).
+        self.create_subscription(Path, "/mission/waypoints", self._on_waypoints, latched)
+        self.create_subscription(PoseStamped, "/target/location", self._on_target, 10)
+
+        # Live endpoints in the local "map" frame (None until received -> fall back to params).
+        self._start_live = None    # from /uav/rtk_position (backbone only)
+        self._goal_wp = None       # from /mission/waypoints (rescue coordinate)
+        self._goal_target = None   # from /target/location (refined survivor, landing leg)
 
         self._publish_grid()
         self.create_timer(float(self.get_parameter("replan_period_sec").value), self._replan)
@@ -115,9 +123,23 @@ class PathPlanningNode(Node):
         self._have_distress = True
 
     def _on_rtk(self, msg: NavSatFix):
-        # Logged for integration wiring; not used as a planning endpoint in
-        # synthetic mode (see FRAME NOTE). Becomes the live start with U1.
-        pass
+        # C2: current drone position becomes the planning START (lat/lon -> local).
+        self._start_live = obstacle_map.latlon_to_local(
+            msg.latitude, msg.longitude, self._datum_lat, self._datum_lon)
+
+    def _on_waypoints(self, msg: Path):
+        # C2: last waypoint pose is the rescue GOAL. mission_status publishes it as
+        # x=longitude, y=latitude in the wgs84 frame -> convert to local "map" metres.
+        if not msg.poses:
+            return
+        last = msg.poses[-1].pose.position
+        self._goal_wp = obstacle_map.latlon_to_local(
+            last.y, last.x, self._datum_lat, self._datum_lon)  # note: y=lat, x=lon
+
+    def _on_target(self, msg: PoseStamped):
+        # C2: refined survivor location for the landing leg. Already local ENU about
+        # the datum (px4_local_enu) -> x=east, y=north drop straight into the map frame.
+        self._goal_target = (msg.pose.position.x, msg.pose.position.y)
 
     # ---- planning --------------------------------------------------------
     def _replan(self):
@@ -126,9 +148,22 @@ class PathPlanningNode(Node):
         if self._require_distress and not self._have_distress:
             return
 
-        path = self._planner.plan(self._start, self._goal)
+        # Start: live RTK position if available, else the start_xy fallback param.
+        start = self._start_live if self._start_live is not None else self._start
+        # Goal: refined survivor target during the landing legs, else the rescue
+        # waypoint, else the goal_xy fallback param.
+        if self._phase in ("TARGET_ACQUIRED", "LANDING") and self._goal_target is not None:
+            goal = self._goal_target
+        elif self._goal_wp is not None:
+            goal = self._goal_wp
+        else:
+            goal = self._goal
+
+        path = self._planner.plan(start, goal)
         if path is None:
-            self.get_logger().warn("RRT* found no path this cycle; retrying next tick.")
+            self.get_logger().warn(
+                f"RRT* found no path (start={[round(v,1) for v in start]}, "
+                f"goal={[round(v,1) for v in goal]}); retrying next tick.")
             return
         self._publish_path(path)
 

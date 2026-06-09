@@ -17,10 +17,13 @@ Conflicts found between this contract and the code actually on `main`, reviewed 
 - **[B] `/target/emergency_coordinate` → `interfaces/EmergencyCoordinate`**, `/rescue/beidou_message`
   → `std_msgs/String`. The original "Custom" was undefined. New msg carries lat/lon + source_id +
   raw_message (see `ros2_ws/src/interfaces/msg/EmergencyCoordinate.msg`).
-- **[C] PX4 bridge (MAVROS vs uXRCE-DDS) — DEFERRED.** Yvonne's `qgc_control/uav_control_node.py` uses
-  MAVROS; the rest of the system targets `px4_msgs`/uXRCE-DDS (`/fmu/*`). For the Stage-1 demo, flight
-  is via PX4 **mission mode** (qgc_control uploads a `.plan`); `path_planning` publishes `/planner/path`
-  for visualization only. The single-bridge decision is revisited before real trajectory control.
+- **[C] PX4 bridge = uXRCE-DDS / `px4_msgs` — RESOLVED 2026-06-10 (not MAVROS).** Evidence: PX4 SITL
+  built, micro-XRCE-DDS Agent installed, `px4_msgs` built, Gazebo Harmonic + ros_gz in use, and
+  `target_detection` already consumes `/fmu/*`. MAVROS is **not installed** and used by only one node
+  (Yvonne's `uav_control_node`), which is therefore **retired from the integration path / to be ported
+  to uXRCE** (owner conversation). Closed loop (C4) = uXRCE flight node `/planner/path` →
+  `/fmu/in/trajectory_setpoint` (offboard); review fallback = PX4 mission mode via QGC. Full toolchain
+  + run architecture: see `docs/PIPELINE_ARCHITECTURE.md`.
 - **[D] Shared geographic datum = Zurich** (decided 2026-06-10). Modules were inconsistent (BeiDou sample
   = Hangzhou, PX4/Gazebo/RTK/QGC = Zurich). Canonical datum lives in `bringup/config/datum.yaml`
   (`datum_lat/lon/alt` = 47.3980, 8.5462 — matches RTK `world_origin`) and is injected into every node by
@@ -60,6 +63,10 @@ Conflicts found between this contract and the code actually on `main`, reviewed 
 **Inputs:**
 - `/target/emergency_coordinate` from `beidou_short_message`
 - `/uav/rtk_position` from `rtk_positioning`
+- `/rtk/mission_viability` from `rtk_positioning` (L3) — **gates precision landing** (land only on
+  `LANDING_VIABLE`, else `LANDING_HOLD` → re-converge → land, or `ABORTED` on timeout)
+- `/uav/rtk_status` from `rtk_positioning` — fix type + accuracy (informs mission logs)
+- `/target/detection` from `target_detection_tracking` — early `TARGET_ACQUIRED`
 - MAVLink telemetry from PX4
 
 **Outputs:**

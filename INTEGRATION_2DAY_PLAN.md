@@ -123,8 +123,12 @@ The original "first concrete tasks" are all done:
 
 1. **Block A — stand up the backbone** (still the #1 risk; owner: integration-PC holder + afiqhs):
    PX4 SITL + Gazebo Harmonic + micro-XRCE-DDS agent + camera/depth drone. Unlocks RTK L3 + target_detection.
-2. **RTK = Level 3 (resilient)** is the integration level (not L2): run `level3_resilient_rtk.launch.py`
-   on the backbone; wire `/uav/rtk_status` + `/rtk/mission_viability` into mission decisions.
+2. ✅ **RTK L3 → mission wiring DONE** (2026-06-10). `mission_status_node` gates precision landing on
+   `/rtk/mission_viability` (lands only on `LANDING_VIABLE`, else `LANDING_HOLD` → re-converge → land,
+   or `ABORTED` on timeout); `/uav/rtk_status` informs the logs ("RTK_FLOAT, 0.80 m"). Permissive
+   fallback when no viability (stubs-only). Verified hold→recover→COMPLETE, hold→timeout→ABORTED, and
+   permissive regression. **Remaining:** run real `level3_resilient_rtk.launch.py` on the backbone so the
+   viability is real (not simulated).
 3. **target_detection deps** on the integration PC: `ultralytics`/`torch` + model file.
 4. ✅ **RESOLVED — single datum/home = Zurich, shared parameter.** Decided 2026-06-10. Canonical datum
    in `bringup/config/datum.yaml` (47.3980, 8.5462 — matches RTK's validated `world_origin`), injected
@@ -138,3 +142,64 @@ The original "first concrete tasks" are all done:
 **Honest review fallback (unchanged):** if the backbone isn't ready, the demonstrable deliverable is the
 complete control-plane topic-flow integration (all 5 nodes live, messages flowing, RRT\* avoiding
 obstacles) even if the Gazebo flight is partial.
+
+## Integration fix plan (from the file-by-file system audit, 2026-06-10)
+
+A strict audit of every node's publishers/subscribers found the five modules build and the **control
+plane flows**, but the system is **not yet a closed loop**. Five findings, prioritised below. P0–P2 are
+doable headless and disturb no finished work; P3 needs the backbone + a decision.
+
+### RTK level build-up (reference — so we never mix levels)
+All three levels share `base_station_node` + `rtk_positioning_node` + `logger_node`. They differ on:
+- **Ground-truth source:** L1 = `simulated_uav_node` (synthetic, NO Gazebo); L2/L3 = `px4_pose_adapter_node`
+  ← `ros_gz_bridge` ← Gazebo (NEEDS backbone).
+- **Corrections:** L1 = none (time-based status); L2 = `rtcm_correction_simulator_node` (nominal);
+  L3 = `rtcm_correction_simulator_node` (disaster profile).
+- **`/rtk/mission_viability`:** produced **only by L3**. ⇒ **Integration RTK = Level 3, and L3 requires the
+  backbone.** There is no headless L3; do NOT invent hybrid chains (e.g. simulated_uav + L3 params).
+
+### Status 2026-06-10
+- **C1 (P0), C2 (P1), C3 (P2): DONE + verified** (headless). Details below.
+- **C4 (P3): decided = uXRCE-DDS** (not MAVROS — see Reconciliation Log [C]); implementation deferred to
+  the backbone; review fallback = PX4 mission mode via QGC (Windows, UDP 18571).
+- **C5: DONE** — full toolchain + run architecture saved to `docs/PIPELINE_ARCHITECTURE.md`.
+- **Two backbone configs:** `gz_x500` (GPS only → RTK + control + flight, runs on WSL headless) vs
+  `gz_x500_depth` (+ camera/depth → target_detection, needs native GPU PC; WSL OpenGL is software
+  `llvmpipe`). target_detection also needs `ultralytics`/`torch` installed + `require_local_pose` (PX4).
+- **Run artifacts gitignored** (`results/logs/*.csv`, `results/screenshots/*.ppm`, `*.jsonl`).
+- **NEXT ON RESUME:** one-time backbone bring-up check (RTK config) to confirm 🟡→🟢 (PX4+Gazebo
+  headless + `/fmu/*` + `/gz/navsat`). Then validate C1/#2 against real RTK viability.
+
+### P0 — Fix bringup RTK wiring  🔴 critical — ✅ DONE (C1)
+**Problem:** `full_rescue.launch.py` launches the bare `rtk_positioning_node`, which has no inputs
+(`/uav/ground_truth`, `/rtk/base_station`, `/rtk/simulated_rtcm` are produced by sibling nodes bringup
+never launches) ⇒ `use_rtk:=true` produces nothing.
+**Fix (launch wiring only, no level-mixing):** when `use_rtk:=true`, `IncludeLaunchDescription` of
+`rtk_positioning/launch/level3_resilient_rtk.launch.py` (pass `scenario` arg) — the validated full L3 chain.
+**Honest consequence:** L3 needs Gazebo, so real RTK output only appears **with the backbone up**; headless,
+the chain starts but `px4_pose_adapter` has no `/gz/navsat` → no `/uav/rtk_position`. That is correct, not a
+bug to paper over. The #2 landing-gate logic was already validated separately with an explicit
+**simulated-viability unit test** (a test harness, NOT a fake RTK level).
+**Files:** `bringup/launch/full_rescue.launch.py`. **Testable headless:** wiring yes; real data needs backbone.
+
+### P1 — Route the planner to the real goal in a common frame  🔴 (GAP 2 + GAP 4)
+`/target/location` and `/mission/waypoints` currently dead-end; `path_planning` plans to *parameterized*
+local endpoints, ignoring the real rescue/target point. Fix: `path_planning_node` subscribes
+`/mission/waypoints` (goal) + `/target/location` (landing re-target), converts RTK start + goal to the local
+"map" frame via the shared datum (`obstacle_map.latlon_to_local`), and plans start→goal. Obstacles stay
+synthetic until U1. **Files:** `path_planning_node.py`. **Testable headless:** ✅
+
+### P2 — Publish `/uav/telemetry`  🟠 (GAP 5; quick win)
+`mission_status_node` publishes `/uav/telemetry` (phase + last RTK status + viability) at 1 Hz to fulfil the
+contract and feed the future dashboard. **Files:** `mission_status_node.py`. **Testable headless:** ✅
+
+### P3 — Close the flight loop  🔴 (GAP 3; largest, gated)
+Nothing commands the drone: `mission_status` is a state machine, `path_planning` doesn't feed PX4, Yvonne's
+MAVROS `uav_control_node` is deferred. Resolve Reconciliation Log [C]: (a) uXRCE node converting
+`/planner/path` → `/fmu/in/trajectory_setpoint`, or (b) MAVROS, or (demo fallback) PX4 **mission mode** via
+QGC (no code). **Needs:** backbone + [C] decision. **Recommendation:** fallback for the review; schedule (a)
+after. **Testable headless:** ❌
+
+### Order
+Commit #2 → **P0 → P1 → P2** (headless, low/medium risk) ⇒ coherent end-to-end control loop for the review.
+**P3** + real L3-on-Gazebo validation wait for the backbone; mission-mode flight is the honest fallback.

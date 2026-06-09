@@ -49,12 +49,14 @@ def build_synthetic_grid(
     cells: List[List[int]] = [[0 for _ in range(n_cols)] for _ in range(n_rows)]
 
     if walls is None:
-        # Default earthquake-zone-style layout: two offset walls leaving a
-        # gap the straight-line path cannot use, forcing a detour.
+        # Default earthquake-zone-style layout: two offset walls forming an
+        # S-corridor that the straight line cannot use, forcing a detour.
+        # Tuned (C2) so the real rescue goal (~datum +60 m E / +90 m N) and the
+        # start (~datum origin) both fall in FREE space and a path exists.
+        # NOTE: synthetic/illustrative only — replaced by a live depth costmap at U1.
         walls = [
-            (30.0, 0.0, 35.0, 65.0),     # wall blocking the lower-left, gap at top
-            (60.0, 35.0, 65.0, 100.0),   # wall blocking the upper-right, gap at bottom
-            (45.0, 45.0, 55.0, 55.0),    # debris block in the centre
+            (25.0, 0.0, 30.0, 75.0),     # lower wall, gap above y=75
+            (50.0, 40.0, 55.0, 100.0),   # upper wall, gap below y=40 (forces an S-route)
         ]
 
     grid = OccupancyGridMap(

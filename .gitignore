@@ -44,3 +44,11 @@ results/README.md
 results/logs/README.md
 results/graphs/rtk_positioning/README.md
 results/notebooklm/README.md
+
+# Run-generated artifacts (regenerated every integration run; do NOT commit raw runs).
+# Curated outputs selected for the report can still be added explicitly with `git add -f`.
+# (gitignore has no inline comments — keep patterns on their own lines.)
+results/logs/**/*.csv
+results/screenshots/**/*.ppm
+results/**/*.jsonl
+results/videos/*.mp4
