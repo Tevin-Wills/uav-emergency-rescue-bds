@@ -58,6 +58,14 @@ class PathPlanningNode(Node):
         self.declare_parameter("rrt_max_iter", 3000)
         self.declare_parameter("rrt_seed", 1)
         self.declare_parameter("require_distress", True)
+        # Shared datum (from bringup/config/datum.yaml; defaults = Zurich). Used by
+        # obstacle_map.latlon_to_local to convert RTK/goal lat/lon into the local
+        # planning frame once a single datum is shared across modules (real-frame
+        # planning; today the node plans with parameterized local endpoints).
+        self.declare_parameter("datum_lat", 47.397971057728981)
+        self.declare_parameter("datum_lon", 8.5461637398001447)
+        self._datum_lat = float(self.get_parameter("datum_lat").value)
+        self._datum_lon = float(self.get_parameter("datum_lon").value)
 
         w = float(self.get_parameter("map_width_m").value)
         h = float(self.get_parameter("map_height_m").value)

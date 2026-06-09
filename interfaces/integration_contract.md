@@ -21,6 +21,12 @@ Conflicts found between this contract and the code actually on `main`, reviewed 
   MAVROS; the rest of the system targets `px4_msgs`/uXRCE-DDS (`/fmu/*`). For the Stage-1 demo, flight
   is via PX4 **mission mode** (qgc_control uploads a `.plan`); `path_planning` publishes `/planner/path`
   for visualization only. The single-bridge decision is revisited before real trajectory control.
+- **[D] Shared geographic datum = Zurich** (decided 2026-06-10). Modules were inconsistent (BeiDou sample
+  = Hangzhou, PX4/Gazebo/RTK/QGC = Zurich). Canonical datum lives in `bringup/config/datum.yaml`
+  (`datum_lat/lon/alt` = 47.3980, 8.5462 — matches RTK `world_origin`) and is injected into every node by
+  the bringup launch via the `/**` wildcard. The BeiDou distress coordinate is derived from datum + offset
+  (auto-consistent). Hangzhou retained only as the narrative target-deployment region; Level 3 flown
+  data/report (Zurich) untouched.
 
 ---
 

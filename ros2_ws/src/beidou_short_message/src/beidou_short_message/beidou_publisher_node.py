@@ -16,6 +16,8 @@ Decode logic mirrors scripts/decode_ascii.py (message format:
 $CCTXM,<destID>,LAT:<lat>,LON:<lon>*<checksum>).
 """
 
+import math
+
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy, HistoryPolicy
@@ -23,8 +25,22 @@ from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy, HistoryPo
 from std_msgs.msg import String
 from interfaces.msg import EmergencyCoordinate
 
-# Default sample distress message (Yuhang District, Hangzhou — same as decode scripts).
-DEFAULT_MESSAGE = "$CCTXM,0,LAT:30.4196,LON:120.2977*XX"
+# Mean Earth radius (m) for the local equirectangular projection (datum -> lat/lon).
+_EARTH_RADIUS_M = 6371000.0
+
+
+def local_to_latlon(east_m: float, north_m: float, lat0: float, lon0: float):
+    """Offset (east, north) metres from a datum -> (lat, lon). Inverse of the
+    equirectangular projection used in path_planning/obstacle_map.py."""
+    lat0_rad = math.radians(lat0)
+    lat = lat0 + math.degrees(north_m / _EARTH_RADIUS_M)
+    lon = lon0 + math.degrees(east_m / (_EARTH_RADIUS_M * math.cos(lat0_rad)))
+    return lat, lon
+
+
+def build_cctxm(source_id, lat: float, lon: float) -> str:
+    """Format a BeiDou $CCTXM,<id>,LAT:<lat>,LON:<lon>*XX message."""
+    return f"$CCTXM,{source_id},LAT:{lat:.4f},LON:{lon:.4f}*XX"
 
 
 def decode_ascii(msg: str):
@@ -45,11 +61,34 @@ class BeidouPublisherNode(Node):
     def __init__(self):
         super().__init__("beidou_publisher_node")
 
-        self.declare_parameter("raw_message", DEFAULT_MESSAGE)
+        # Shared datum (from bringup/config/datum.yaml; defaults = Zurich, matching
+        # rtk_positioning's world_origin). The distress coordinate is derived from
+        # the datum + an offset, so it auto-stays consistent with the sim home.
+        self.declare_parameter("datum_lat", 47.397971057728981)
+        self.declare_parameter("datum_lon", 8.5461637398001447)
+        self.declare_parameter("target_offset_east_m", 60.0)
+        self.declare_parameter("target_offset_north_m", 90.0)
+        self.declare_parameter("source_id", "0")
+        # raw_message: leave empty to derive from datum+offset; set to override
+        # with an explicit $CCTXM message.
+        self.declare_parameter("raw_message", "")
         self.declare_parameter("publish_period_sec", 2.0)
 
-        self.raw_message = self.get_parameter("raw_message").value
         period = float(self.get_parameter("publish_period_sec").value)
+        override = str(self.get_parameter("raw_message").value).strip()
+        if override:
+            self.raw_message = override
+        else:
+            lat0 = float(self.get_parameter("datum_lat").value)
+            lon0 = float(self.get_parameter("datum_lon").value)
+            east = float(self.get_parameter("target_offset_east_m").value)
+            north = float(self.get_parameter("target_offset_north_m").value)
+            src = str(self.get_parameter("source_id").value)
+            d_lat, d_lon = local_to_latlon(east, north, lat0, lon0)
+            self.raw_message = build_cctxm(src, d_lat, d_lon)
+            self.get_logger().info(
+                f"Derived distress coordinate from datum ({lat0:.5f},{lon0:.5f}) "
+                f"+ offset (E{east:.0f}m,N{north:.0f}m) -> {self.raw_message}")
 
         # Latched QoS so late subscribers still get the distress coordinate.
         latched = QoSProfile(

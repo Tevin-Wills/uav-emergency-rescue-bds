@@ -126,9 +126,12 @@ The original "first concrete tasks" are all done:
 2. **RTK = Level 3 (resilient)** is the integration level (not L2): run `level3_resilient_rtk.launch.py`
    on the backbone; wire `/uav/rtk_status` + `/rtk/mission_viability` into mission decisions.
 3. **target_detection deps** on the integration PC: `ultralytics`/`torch` + model file.
-4. **TEAM DECISION — single datum/home.** Modules are geographically inconsistent (BeiDou=Hangzhou,
-   PX4/QGC=Zurich). Agree one origin so planner/RTK/mission share a frame; until then path_planning
-   plans in a local "map" frame with parameterized endpoints.
+4. ✅ **RESOLVED — single datum/home = Zurich, shared parameter.** Decided 2026-06-10. Canonical datum
+   in `bringup/config/datum.yaml` (47.3980, 8.5462 — matches RTK's validated `world_origin`), injected
+   into every node via the bringup launch (`/**` wildcard). BeiDou distress coordinate is now *derived*
+   from datum + offset (auto-consistent, lands in the QGC waypoint box). Hangzhou kept only as the
+   narrative "target deployment region". Level 3 work untouched. (path_planning still plans in the local
+   "map" frame for now; it reads the datum, ready for real-frame endpoints.)
 5. **Deferred, tracked:** U1 — path_planning synthetic grid → live depth costmap (GitHub issue #1).
 6. **Stage 2 — Foxglove ops view**, then **Stage 3 — custom dashboard** (see top of doc).
 

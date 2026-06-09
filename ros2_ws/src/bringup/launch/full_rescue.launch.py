@@ -24,6 +24,8 @@ Usage:
   ros2 launch bringup full_rescue.launch.py use_rtk:=false use_detection:=false   # stubs-only smoke test
 """
 
+import os
+from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.conditions import IfCondition
@@ -35,6 +37,9 @@ def generate_launch_description():
     use_rtk = LaunchConfiguration("use_rtk")
     use_detection = LaunchConfiguration("use_detection")
 
+    # Shared geographic datum applied to every node (/** wildcard in the file).
+    datum = os.path.join(get_package_share_directory("bringup"), "config", "datum.yaml")
+
     return LaunchDescription([
         DeclareLaunchArgument(
             "use_rtk", default_value="true",
@@ -44,23 +49,24 @@ def generate_launch_description():
             description="Launch the real target_detection node (needs camera + YOLO deps)."),
 
         # --- Light nodes: the integration backbone, no external deps ---
+        # parameters=[datum] injects the shared geographic datum (/** wildcard).
         Node(
             package="beidou_short_message", executable="beidou_publisher_node",
-            name="beidou_publisher_node", output="screen"),
+            name="beidou_publisher_node", output="screen", parameters=[datum]),
         Node(
             package="qgc_control", executable="mission_status_node",
-            name="mission_status_node", output="screen"),
+            name="mission_status_node", output="screen", parameters=[datum]),
         Node(
             package="path_planning", executable="path_planning_node",
-            name="path_planning_node", output="screen"),
+            name="path_planning_node", output="screen", parameters=[datum]),
 
         # --- Heavy real nodes: gated by launch args ---
         Node(
             package="rtk_positioning", executable="rtk_positioning_node",
-            name="rtk_positioning_node", output="screen",
+            name="rtk_positioning_node", output="screen", parameters=[datum],
             condition=IfCondition(use_rtk)),
         Node(
             package="target_detection_tracking", executable="target_detection_node",
-            name="target_detection_node", output="screen",
+            name="target_detection_node", output="screen", parameters=[datum],
             condition=IfCondition(use_detection)),
     ])

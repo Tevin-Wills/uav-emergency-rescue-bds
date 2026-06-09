@@ -1,0 +1,22 @@
+# Shared geographic datum / home for the UAV Emergency Rescue System.
+#
+# Single source of truth for the world origin. Decided 2026-06-10: the
+# simulation is anchored at the PX4/Gazebo default home (Zurich), which is also
+# rtk_positioning's validated world_origin and qgc_control's home — so nothing
+# already built or validated (Level 3 mission/report) has to move.
+#
+# The "earthquake zone" is a narrative; these are simulation coordinates only.
+# Hangzhou is the project's stated target deployment region (narrative), not the
+# sim datum.
+#
+# The /** wildcard applies these parameters to EVERY node that bringup launches,
+# so all modules share one datum. Each consuming node also declares its own
+# defaults (same values) so it still runs standalone.
+#
+# NOTE: this MUST match rtk_positioning's world_origin_lat/lon (px4_pose_adapter
+# + level2/level3 configs). If you change the datum, change both.
+/**:
+  ros__parameters:
+    datum_lat: 47.397971057728981
+    datum_lon: 8.5461637398001447
+    datum_alt: 0.0
