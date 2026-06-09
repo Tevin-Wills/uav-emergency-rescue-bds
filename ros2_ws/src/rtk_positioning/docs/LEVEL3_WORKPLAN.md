@@ -2,7 +2,7 @@
 
 **Module:** `rtk_positioning` — Student 1 (Tevin Wills)
 **Created:** 2026-06-03
-**Status:** Awaiting validation before implementation begins
+**Status:** Phase 2 complete through Step 2.8 — analyse_level3.py and figures remaining
 
 ---
 
@@ -134,11 +134,14 @@ existing `/rtk/accuracy` topic carries the dynamic value.
 ### 5.4 Mission Viability Signal (New Topic)
 A new lightweight topic: `/rtk/mission_viability` (`std_msgs/String`)
 
-Published values:
-- `APPROACH_VIABLE` — current accuracy ≤ 2.0 m, safe to navigate
-- `LANDING_VIABLE` — current accuracy ≤ 0.3 m, safe to initiate precision landing
-- `DEGRADED` — accuracy between 0.3 m and 2.0 m, approach only
-- `INSUFFICIENT` — accuracy > 2.0 m, hold position or abort phase
+Published values (non-overlapping, priority order):
+- `LANDING_VIABLE`  — accuracy ≤ 0.3 m; safe to initiate precision landing
+- `APPROACH_VIABLE` — accuracy 0.3–2.0 m; safe to navigate, not to land
+- `DEGRADED`        — accuracy 2.0–4.0 m; below approach threshold, reduce speed / hold
+- `INSUFFICIENT`    — accuracy > 4.0 m; abort phase or hold position
+
+Note: the 4.0 m DEGRADED ceiling is 2× the approach threshold. Peak compound-scenario
+noise reaches 3.0 m, so DEGRADED is reachable; INSUFFICIENT is the extreme edge case.
 
 This is the signal `path_planning` will consume during integration to modulate
 mission behaviour. For Level 3 standalone, it is logged and graphed.
@@ -279,16 +282,17 @@ the dependency is explicit.
 |-------------|-------|--------|
 | Level 1 complete (code + results + graphs) | — | Done ✓ |
 | Level 2 complete (code + results + graphs) | — | Done ✓ |
-| Progress report (L1, L2, L3 plan) | 1 | In progress |
-| `config/level3_disaster_scenario.yaml` | 2.1 | Pending |
-| `config/level3_total_failure.yaml` | 2.1 | Pending |
-| Extended `rtcm_correction_simulator_node` | 2.2 | Pending |
-| Dynamic uncertainty in `rtk_positioning_node` | 2.3 | Pending |
-| `/rtk/mission_viability` topic | 2.4 | Pending |
-| Updated `logger_node` | 2.5 | Pending |
-| Level 3 launch file + runner | 2.6 | Pending |
-| Level 3 simulation runs (Run 2 + Run 3) | 2.7–2.8 | Pending |
-| Level 3 analysis script + 6 figures | 2.9 | Pending |
+| Progress report (L1, L2, L3 plan) | 1 | Done ✓ |
+| `config/level3_disaster_scenario.yaml` | 2.1 | Done ✓ |
+| `config/level3_total_failure.yaml` | 2.1 | Done ✓ |
+| Extended `rtcm_correction_simulator_node` | 2.2 | Done ✓ |
+| Dynamic uncertainty in `rtk_positioning_node` | 2.3 | Done ✓ |
+| `/rtk/mission_viability` topic | 2.4 | Done ✓ |
+| Updated `logger_node` | 2.5 | Done ✓ |
+| Level 3 launch file + runner | 2.6 | Done ✓ |
+| Level 3 Run 2 — compound disaster (drone flying, 878 s) | 2.7 | Done ✓ |
+| Level 3 Run 3 — total failure (drone flying, 843 s) | 2.8 | Done ✓ |
+| Level 3 analysis script + 6 figures | 2.9 | **In progress** |
 | RTKLIB validation table | 3 | Pending |
 | Final report chapters updated | 4 | Pending |
 | Full integration run | 5 | Blocked — team dependency |

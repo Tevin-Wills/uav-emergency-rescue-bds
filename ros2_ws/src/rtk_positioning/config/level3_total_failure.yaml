@@ -1,0 +1,57 @@
+# Level 3 — Total Failure Scenario (Run 3)
+#
+# Zero corrections, GNSS_ONLY throughout. Elevated noise representing worst-case
+# disaster zone conditions. This is a config-only lower-bound run — no new code
+# required beyond what Run 2 builds.
+#
+# Run 1 (baseline) = Level 2 results, already complete.
+# Run 2 (compound) = level3_disaster_scenario.yaml
+# Run 3 (this config) = total failure, no RTK corrections available.
+
+px4_pose_adapter_node:
+  ros__parameters:
+    gz_navsat_topic: "/gz/navsat"
+    world_origin_lat: 47.397971057728981
+    world_origin_lon: 8.5461637398001447
+    world_origin_alt: 0.0
+    publish_rate_hz: 10.0
+
+rtcm_correction_simulator_node:
+  ros__parameters:
+    publish_rate_hz: 5.0
+    correction_source: "simulated_base_station"
+    simulated_length_bytes: 120
+
+    # No phase profile — fixed total failure conditions throughout.
+    use_phase_profile: false
+
+    # Zero quality forces GNSS_ONLY — no RTK_FLOAT or RTK_FIXED possible.
+    stable_quality: 0.0
+    float_quality: 0.0
+    lost_quality: 0.0
+
+    # Elevated GNSS noise for total failure scenario (peak disaster conditions).
+    # gnss_noise_override_std_m is read by rtcm_correction_simulator_node and
+    # published in each SimulatedRtcm message for the positioning node to consume.
+    gnss_noise_override_std_m: 3.0
+
+rtk_positioning_node:
+  ros__parameters:
+    use_simulated_rtcm: true
+    simulated_rtcm_topic: "/rtk/simulated_rtcm"
+    correction_timeout_sec: 2.0
+    float_quality_threshold: 0.4
+    fixed_quality_threshold: 0.8
+
+    # Dynamic uncertainty enabled — same as Run 2 so outputs are comparable.
+    use_dynamic_uncertainty: true
+
+    # Mission viability thresholds — same values as Run 2.
+    viability_approach_threshold_m: 2.0
+    viability_landing_threshold_m: 0.3
+
+logger_node:
+  ros__parameters:
+    log_directory: ""
+    log_level: "level3"
+    scenario: "total_failure"

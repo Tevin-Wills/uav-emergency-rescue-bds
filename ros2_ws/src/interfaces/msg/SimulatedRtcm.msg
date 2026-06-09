@@ -7,3 +7,4 @@ bool correction_available
 float32 correction_age_sec
 float32 correction_quality
 string correction_source
+float32 gnss_noise_std_m

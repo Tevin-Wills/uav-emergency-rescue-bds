@@ -1,0 +1,107 @@
+# Level 3 — Compound Disaster Scenario (Run 2)
+#
+# Models a single rescue mission through a disaster zone where GNSS degradation
+# conditions co-occur and vary by mission phase. This is the core Level 3 build.
+#
+# Run 1 (baseline) = Level 2 results, already complete.
+# Run 2 (this config) = compound disaster conditions.
+# Run 3 (total failure) = level3_total_failure.yaml
+#
+# Mission phase timeline:
+#   Departure   0–120 s    : open sky, ideal conditions
+#   Approach    120–240 s  : entering disaster zone, degrading
+#   Search zone 240–600 s  : over collapse, peak degradation
+#   Landing     600–660 s  : descending, degraded but critical
+#   Exit        660–780 s  : leaving disaster zone, recovering
+
+px4_pose_adapter_node:
+  ros__parameters:
+    gz_navsat_topic: "/gz/navsat"
+    world_origin_lat: 47.397971057728981
+    world_origin_lon: 8.5461637398001447
+    world_origin_alt: 0.0
+    publish_rate_hz: 10.0
+
+rtcm_correction_simulator_node:
+  ros__parameters:
+    publish_rate_hz: 5.0
+    correction_source: "simulated_base_station"
+    simulated_length_bytes: 120
+
+    # Time-varying phase profile — overrides fixed stable/float/lost quality values.
+    # Each phase entry defines: start_sec, end_sec, gnss_noise_std_m,
+    # correction_quality (0.0–1.0), and correction_gap_interval_sec /
+    # correction_gap_duration_sec (0 = no gaps).
+    use_phase_profile: true
+    phase_profile:
+      - phase: "departure"
+        start_sec: 0.0
+        end_sec: 120.0
+        gnss_noise_std_m: 1.5
+        correction_quality: 0.95
+        correction_gap_interval_sec: 0.0
+        correction_gap_duration_sec: 0.0
+
+      - phase: "approach"
+        start_sec: 120.0
+        end_sec: 240.0
+        gnss_noise_std_m_start: 1.5
+        gnss_noise_std_m_end: 2.5
+        correction_quality_start: 0.95
+        correction_quality_end: 0.60
+        correction_gap_interval_sec: 60.0
+        correction_gap_duration_sec: 5.0
+
+      - phase: "search_zone"
+        start_sec: 240.0
+        end_sec: 600.0
+        gnss_noise_std_m: 2.75
+        correction_quality: 0.60
+        correction_gap_interval_sec: 90.0
+        correction_gap_duration_sec: 37.5
+
+      - phase: "landing"
+        start_sec: 600.0
+        end_sec: 660.0
+        gnss_noise_std_m: 2.5
+        correction_quality: 0.60
+        correction_gap_interval_sec: 0.0
+        correction_gap_duration_sec: 0.0
+
+      - phase: "exit"
+        start_sec: 660.0
+        end_sec: 780.0
+        gnss_noise_std_m_start: 2.5
+        gnss_noise_std_m_end: 1.5
+        correction_quality_start: 0.65
+        correction_quality_end: 0.90
+        correction_gap_interval_sec: 0.0
+        correction_gap_duration_sec: 0.0
+
+    # Fallback values used when phase profile is disabled (backwards compat).
+    stable_quality: 0.95
+    float_quality: 0.5
+    lost_quality: 0.0
+
+rtk_positioning_node:
+  ros__parameters:
+    use_simulated_rtcm: true
+    simulated_rtcm_topic: "/rtk/simulated_rtcm"
+    correction_timeout_sec: 2.0
+    float_quality_threshold: 0.4
+    fixed_quality_threshold: 0.8
+
+    # Dynamic uncertainty — enabled for Level 3.
+    # Replaces fixed per-status accuracy with a value computed from
+    # correction quality, correction age, and current RTK status.
+    use_dynamic_uncertainty: true
+
+    # Mission viability thresholds (metres, horizontal).
+    viability_approach_threshold_m: 2.0
+    viability_landing_threshold_m: 0.3
+
+logger_node:
+  ros__parameters:
+    log_directory: ""
+    log_level: "level3"
+    scenario: "compound_disaster"

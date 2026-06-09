@@ -20,6 +20,10 @@ simulation/logs/
 *.bag
 *.db3
 
+# Raw PX4 ULogs — exceed GitHub's 100 MB/file limit; kept local only.
+# Derived CSVs and the Fig-7 crossval PNG are committed, so analysis stays reproducible.
+*.ulg
+
 # Editors
 .vscode/
 .idea/
@@ -34,3 +38,9 @@ Thumbs.db
 # Environment
 .env
 *.local
+
+# Local analysis guide markdown files (documentation only, not for version control)
+results/README.md
+results/logs/README.md
+results/graphs/rtk_positioning/README.md
+results/notebooklm/README.md
