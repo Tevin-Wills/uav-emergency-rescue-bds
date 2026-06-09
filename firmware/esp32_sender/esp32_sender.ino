@@ -1,3 +1,4 @@
+
 // ESP32 BDS-SMC Sender
 // Sends BeiDou Short Message payloads via UART to BDS module
 // Wiring: BDS RS232-TTL RXD->GPIO16, TXD->GPIO17, VCC->3.3V, GND->GND
@@ -68,6 +69,12 @@ void loop() {
     burstCount = 0;
     bdsBufLen = 0;
 
+    // Flush any stale BDS data before TX so it does not pollute T1 line
+    while (BDSSerial.available()) BDSSerial.read();
+    delay(50);
+
+    Serial.println();
+    Serial.println("---TX---");
     unsigned long t1 = millis();
     Serial.print("[T1] "); Serial.println(t1);
 
@@ -81,7 +88,7 @@ void loop() {
   // Buffered BDS response reader — detects T2 and T3 markers
   while (BDSSerial.available()) {
     char c = BDSSerial.read();
-    Serial.write(c); // still forward raw bytes for XCOM
+    // Serial.write(c); // disabled: raw forwarding floods logger
 
     // Buffer printable ASCII only
     if (c >= 32 && c < 127 && bdsBufLen < 126) {

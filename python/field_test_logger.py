@@ -108,8 +108,8 @@ def log_field_test(env, location, gps, obstruction, weather, antenna_dir,
 
                 print(f"  {line}")
 
-                if line.startswith("[T1]") or line.startswith("[TX#]"):
-                    if line.startswith("[TX#]"):
+                if "[T1]" in line or "[TX#]" in line:
+                    if "[TX#]" in line:
                         attempt += 1
                         t_start = now
                         waiting = True
