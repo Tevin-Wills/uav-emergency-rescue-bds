@@ -1,0 +1,4 @@
+format,bytes,bits,compression_vs_ascii_pct
+ASCII,46,368,0.0
+Binary,16,128,65.2
+Huffman,23,184,50.0
