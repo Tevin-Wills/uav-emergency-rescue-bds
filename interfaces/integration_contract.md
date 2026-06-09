@@ -6,6 +6,24 @@ This document defines what each module must provide as inputs and outputs to gua
 
 ---
 
+## Reconciliation Log
+
+Conflicts found between this contract and the code actually on `main`, reviewed and decided 2026-06-09
+(Stage-1 integration). The contract is updated to match these decisions.
+
+- **[A] `/uav/rtk_position` type → `sensor_msgs/NavSatFix`** (was `geometry_msgs/PoseStamped`).
+  Reality: `rtk_positioning_node.py` publishes `NavSatFix` and `target_detection` + `logger_node`
+  subscribe as `NavSatFix`. The contract was stale; forcing PoseStamped would break working nodes.
+- **[B] `/target/emergency_coordinate` → `interfaces/EmergencyCoordinate`**, `/rescue/beidou_message`
+  → `std_msgs/String`. The original "Custom" was undefined. New msg carries lat/lon + source_id +
+  raw_message (see `ros2_ws/src/interfaces/msg/EmergencyCoordinate.msg`).
+- **[C] PX4 bridge (MAVROS vs uXRCE-DDS) — DEFERRED.** Yvonne's `qgc_control/uav_control_node.py` uses
+  MAVROS; the rest of the system targets `px4_msgs`/uXRCE-DDS (`/fmu/*`). For the Stage-1 demo, flight
+  is via PX4 **mission mode** (qgc_control uploads a `.plan`); `path_planning` publishes `/planner/path`
+  for visualization only. The single-bridge decision is revisited before real trajectory control.
+
+---
+
 ## Module 1 — `rtk_positioning`
 
 **Owner:** Student 1
@@ -16,7 +34,7 @@ This document defines what each module must provide as inputs and outputs to gua
 
 **Outputs:**
 - `/uav/raw_gps` — raw GNSS fix (`sensor_msgs/NavSatFix`)
-- `/uav/rtk_position` — RTK-corrected UAV position (`geometry_msgs/PoseStamped`)
+- `/uav/rtk_position` — RTK-corrected UAV position (`sensor_msgs/NavSatFix`) — see Reconciliation Log [A]
 - `/uav/rtk_status` — fix quality string: `RTK_FIXED`, `RTK_FLOAT`, or `NONE` (`std_msgs/String`)
 
 **ROS 2 Topics Published:** `/uav/raw_gps`, `/uav/rtk_position`, `/uav/rtk_status`
@@ -108,8 +126,8 @@ This document defines what each module must provide as inputs and outputs to gua
 - Incoming short message with encoded rescue coordinates
 
 **Outputs:**
-- `/rescue/beidou_message` — raw decoded message (Custom)
-- `/target/emergency_coordinate` — extracted rescue coordinate (Custom)
+- `/rescue/beidou_message` — raw decoded message text (`std_msgs/String`) — see Reconciliation Log [B]
+- `/target/emergency_coordinate` — extracted rescue coordinate (`interfaces/EmergencyCoordinate`) — see Reconciliation Log [B]
 
 **ROS 2 Topics Published:** `/rescue/beidou_message`, `/target/emergency_coordinate`
 

@@ -1,28 +1,43 @@
 """
 Full rescue simulation launch file.
 
-This file will launch all five ROS 2 modules together with PX4 SITL
-and Gazebo Harmonic for the integrated rescue mission demonstration.
+Thin wrapper that delegates to the bringup package's full_rescue.launch.py, which
+launches the five-module ROS 2 topic graph for the integrated rescue demo.
 
-TODO: Implement after individual modules are stable and tested.
+External prerequisites (start separately):
+  1. PX4 SITL + Gazebo Harmonic
+  2. micro-XRCE-DDS Agent
+  3. QGroundControl (for mission-mode flight)
 
-Expected launch sequence:
-  1. PX4 SITL + Gazebo Harmonic (external, started separately)
-  2. micro-XRCE-DDS Agent (external, started separately)
-  3. rtk_positioning node
-  4. beidou_short_message node
-  5. qgc_control node
-  6. path_planning node
-  7. target_detection_tracking node
-  8. bringup coordinator node
-
-Usage (once implemented):
+Usage:
   ros2 launch simulation full_rescue_sim.launch.py
+  ros2 launch simulation full_rescue_sim.launch.py use_rtk:=false use_detection:=false
+
+Launch args (forwarded to bringup):
+  use_rtk        (default true)  -- launch the real rtk_positioning node
+  use_detection  (default true)  -- launch the real target_detection node
 """
 
+import os
+from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.substitutions import LaunchConfiguration
 
 
 def generate_launch_description():
-    # TODO: Add node declarations for each module
-    return LaunchDescription([])
+    bringup_share = get_package_share_directory("bringup")
+    full_rescue = os.path.join(bringup_share, "launch", "full_rescue.launch.py")
+
+    return LaunchDescription([
+        DeclareLaunchArgument("use_rtk", default_value="true"),
+        DeclareLaunchArgument("use_detection", default_value="true"),
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(full_rescue),
+            launch_arguments={
+                "use_rtk": LaunchConfiguration("use_rtk"),
+                "use_detection": LaunchConfiguration("use_detection"),
+            }.items(),
+        ),
+    ])

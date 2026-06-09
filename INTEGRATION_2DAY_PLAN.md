@@ -1,11 +1,38 @@
 # Two-Day System Integration Plan — UAV Emergency Rescue (BDS)
 
-_Last updated: 2026-06-09. Owner: Student 1 (Tevin Wills). Status: planning complete, execution not started._
+_Last updated: 2026-06-09. Owner: Student 1 (Tevin Wills). Status: execution started (Stage 1 integration). Dashboard added as 3-stage end goal._
 
 ## Goal
 A live, end-to-end ROS 2 demo of the rescue pipeline:
 **BeiDou coordinate → mission → flight in PX4/Gazebo → RTK positioning + target detection → precision landing**,
 launched from one command, with topic flow visible.
+
+**Why 2 days:** the next progress-report review + presentation must show the **system integration** as
+the headline deliverable. The integrated, runnable pipeline (topics flowing end-to-end) is the minimum
+we have to demonstrate at that review.
+
+## End goal: a rescue operations dashboard (3-stage path)
+On top of the integrated pipeline we are building an **operations view** that shows the live rescue
+mission — *not* a QGroundControl replacement, but the rescue-specific story QGC cannot show
+(BeiDou distress-coordinate ingestion → mission state machine → target detection → RTK fix quality →
+precision landing). It is a faithful window into whatever the ROS 2 topic graph actually publishes, and
+is honestly labeled as a **simulation / integration test harness**, not a fielded system. Sequencing is
+strict — each stage is gated by the previous one being live:
+
+1. **Stage 1 — Integration (this plan, Days 1–2).** Get the topic graph live end-to-end. A dashboard is
+   pointless until topics actually publish. This is what the review must show.
+2. **Stage 2 — Foxglove ops view (after Stage 1).** Stand up `foxglove_bridge` + Foxglove Studio panels
+   (map from `NavSatFix`, `/mission/status` state machine, camera image, `/target/*`, RTK fix quality).
+   Hours of work, zero frontend code — proves the pipeline visually for the demo.
+3. **Stage 3 — Custom web dashboard (final path, time permitting).** Bespoke web app
+   (`rosbridge_server` + `roslibjs` + map/video/plots) for polish and portfolio value. Built only after
+   the topics are real and Foxglove has validated the data flow.
+
+## ⚠️ Committed deferred upgrades (do NOT forget)
+
+| # | Upgrade | Trigger / when | Status |
+|---|---|---|---|
+| U1 | **path_planning obstacle source: synthetic grid → live depth-camera costmap.** The salvaged RRT\* planner ships first with a static/synthetic `OccupancyGrid` (decoupled from the camera; target_detection untouched). Swap in a live `/depth_camera` → 2D costmap projection — same planner, only the grid source changes. path_planning + target_detection then share `/depth_camera`. | Once the PX4/Gazebo camera backbone is solid and validated | ⏳ Pending — tracked here + in planner node TODO + memory `project_pathplanning_upgrade` |
 
 ## Asset inventory (reality on `main` today)
 
@@ -14,15 +41,17 @@ launched from one command, with topic flow visible.
 | `rtk_positioning` | ✅ Real | `/uav/rtk_position` (NavSatFix), `/uav/rtk_status`, `/uav/raw_gps`, `/rtk/*` | PX4 odom (L2/L3) |
 | `target_detection_tracking` | ✅ Real (afiqhs) | `/target/detection` (Bool), `/target/location` (PoseStamped) | `/camera/image_raw`, `/depth_camera`, `/fmu/out/vehicle_local_position`, `/uav/rtk_position`, `/uav/rtk_status`, `/mission/status` |
 | `px4_msgs` | ✅ Real | (msg defs) | — |
-| `interfaces` | ✅ Builds | only `SimulatedRtcm.msg` | — |
-| `beidou_short_message` | ⚠️ Code only, NOT ROS 2 | (should: `/target/emergency_coordinate`, `/rescue/beidou_message`) | — |
-| `qgc_control` | ❌ Empty stub | (should: `/mission/status`, `/mission/waypoints`, `/uav/telemetry`) | `/target/emergency_coordinate`, `/uav/rtk_position` |
-| `path_planning` | ❌ Empty stub | (should: `/planner/path`, `/fmu/in/trajectory_setpoint`) | everything |
-| `bringup` / `full_rescue_sim.launch.py` | ❌ Empty | — | — |
+| `interfaces` | ✅ Builds | `SimulatedRtcm.msg`, **`EmergencyCoordinate.msg`** | — |
+| `beidou_short_message` | ✅ **Real ROS 2** (`beidou_publisher_node`) | `/target/emergency_coordinate`, `/rescue/beidou_message` | — |
+| `qgc_control` | ✅ **Built** — `mission_status_node` (stub) + Yvonne's MAVROS node (deferred) | `/mission/status`, `/mission/waypoints` | `/target/emergency_coordinate`, `/target/detection` |
+| `path_planning` | ✅ **Real** — salvaged RRT\* on synthetic grid (`path_planning_node`) | `/planner/path`, `/map/obstacles` | `/mission/status`, `/target/emergency_coordinate`, `/uav/rtk_position` |
+| `bringup` / `full_rescue_sim.launch.py` | ✅ **Done** — `full_rescue.launch.py` launches all 5; sim wrapper delegates to it | — | — |
 
-**Critical-path dependency:** `target_detection` (real) needs `/mission/status` (from `qgc_control`, empty)
-and a camera-equipped drone in Gazebo publishing `/camera/image_raw` + `/depth_camera`. That backbone is
-the hardest part — start it first.
+**Status (2026-06-09):** all 5 modules are ROS 2 and build (8/8 pkgs). The **control-plane flows
+end-to-end** (BeiDou → mission state machine → RRT\* path), verified via stubs-only smoke test.
+**Critical-path dependency remaining:** the heavy real nodes (RTK L3, target_detection) need the
+**PX4 SITL + Gazebo Harmonic + micro-XRCE-DDS + camera/depth backbone** — not yet stood up, still the
+hardest part (Block A). target_detection's `/mission/status` input is now satisfied by `qgc_control`.
 
 ## Strategy: real anchors + thin stubs (sanctioned by `docs/integration_plan.md` contingency clause)
 Keep the two real nodes (RTK, target_detection). Fill the three gaps (qgc_control, path_planning, beidou)
@@ -80,9 +109,29 @@ demonstrable integrated topic graph within the time available.
 4. Two days is tight for a fully-flying demo — honest fallback is a complete topic-flow integration
    (all nodes live, messages flowing) even if the Gazebo flight is partial.
 
-## First concrete tasks when resuming (S1-owned, can start immediately)
-1. Add custom `.msg` types to `ros2_ws/src/interfaces/msg/` (or decide to reuse std/geometry msgs).
-2. Make `beidou_short_message`, `qgc_control`, `path_planning` minimal buildable packages.
-3. BeiDou ROS 2 wrapper node publishing `/target/emergency_coordinate`.
-4. `bringup` full-system launch skeleton.
-5. Contract edit: `/uav/rtk_position` → `NavSatFix`.
+## Progress log — software glue COMPLETE (2026-06-09)
+The original "first concrete tasks" are all done:
+1. ✅ `EmergencyCoordinate.msg` added to `interfaces`.
+2. ✅ `beidou_short_message`, `qgc_control`, `path_planning` are buildable ROS 2 packages.
+3. ✅ BeiDou wrapper `beidou_publisher_node` publishes `/target/emergency_coordinate`.
+4. ✅ `bringup/full_rescue.launch.py` launches all 5; sim wrapper delegates to it.
+5. ✅ Contract reconciled — `/uav/rtk_position` → `NavSatFix` (+ Reconciliation Log [A][B][C]).
+6. ✅ path_planning: ROS 1 RRT\* salvaged into ROS 2 (`rrt_star_planner` + synthetic grid); real avoidance verified.
+
+## Revised next steps (what remains)
+**Software glue is done; remaining work is backbone + decisions + the two deferred stages.**
+
+1. **Block A — stand up the backbone** (still the #1 risk; owner: integration-PC holder + afiqhs):
+   PX4 SITL + Gazebo Harmonic + micro-XRCE-DDS agent + camera/depth drone. Unlocks RTK L3 + target_detection.
+2. **RTK = Level 3 (resilient)** is the integration level (not L2): run `level3_resilient_rtk.launch.py`
+   on the backbone; wire `/uav/rtk_status` + `/rtk/mission_viability` into mission decisions.
+3. **target_detection deps** on the integration PC: `ultralytics`/`torch` + model file.
+4. **TEAM DECISION — single datum/home.** Modules are geographically inconsistent (BeiDou=Hangzhou,
+   PX4/QGC=Zurich). Agree one origin so planner/RTK/mission share a frame; until then path_planning
+   plans in a local "map" frame with parameterized endpoints.
+5. **Deferred, tracked:** U1 — path_planning synthetic grid → live depth costmap (GitHub issue #1).
+6. **Stage 2 — Foxglove ops view**, then **Stage 3 — custom dashboard** (see top of doc).
+
+**Honest review fallback (unchanged):** if the backbone isn't ready, the demonstrable deliverable is the
+complete control-plane topic-flow integration (all 5 nodes live, messages flowing, RRT\* avoiding
+obstacles) even if the Gazebo flight is partial.

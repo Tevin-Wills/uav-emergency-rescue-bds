@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<launch>
+    <!--  overwrite these args -->
+    <arg name="debug" default="false" />
+    <arg name="gui" default="true" />
+    <arg name="pause" default="false" />
+    <arg name="world" default="$(find px4_rrt_avoidance)/world/world_3.world" />
+    <arg name="fcu_url" default="udp://:14540@localhost:14580" />
+    <arg name="respawn_mavros" default="false"/>
+
+    <!-- PX4 Gazebo plugin paths — hardcoded so setup_gazebo.bash is not required -->
+    <env name="GAZEBO_PLUGIN_PATH"
+         value="$(optenv GAZEBO_PLUGIN_PATH):/home/user/PX4-Autopilot/build/px4_sitl_default/build_gazebo"/>
+    <env name="LD_LIBRARY_PATH"
+         value="$(optenv LD_LIBRARY_PATH):/home/user/PX4-Autopilot/build/px4_sitl_default/build_gazebo"/>
+    <!-- PX4 sitl_gazebo models + project custom models (PX4 sitl models MUST come before project models) -->
+    <env name="GAZEBO_MODEL_PATH"
+         value="$(optenv GAZEBO_MODEL_PATH):/home/user/PX4-Autopilot/Tools/sitl_gazebo/models:$(find px4_rrt_avoidance)/include/gazebo_models"/>
+    <!-- Software rendering fallback — prevents gzclient freeze when GPU not available in Docker -->
+    <env name="LIBGL_ALWAYS_SOFTWARE" value="1"/>
+
+    <!-- empty world -->
+    <include file="$(find gazebo_ros)/launch/empty_world.launch" >
+        <arg name="gui" value="$(arg gui)" />
+        <arg name="world_name" value="$(arg world)" />
+        <arg name="paused" value="$(arg pause)" />
+    </include>
+
+    <!-- MAVROS -->
+    <include file="$(find mavros)/launch/px4.launch">
+        <arg name="gcs_url" value="udp://:14557@127.0.0.1:14550"/>
+        <arg name="fcu_url" value="$(arg fcu_url)"/>
+        <arg name="respawn_mavros" value="$(arg respawn_mavros)"/>
+    </include>
+
+    <!-- PX4 SITL: delay 15s to let Gazebo fully load before PX4 tries to connect -->
+    <!-- world_3.world already includes iris_rs_D435 model with MAVLink plugin -->
+    <!-- PX4_SIM_MODEL=iris_obs_avoid sets COM_OBS_AVOID=1 via airframe parameters -->
+    <include file="$(find px4)/launch/px4.launch">
+        <arg name="vehicle" value="iris_obs_avoid"/>
+        <arg name="interactive" value="false"/>
+    </include>
+
+    <node pkg="px4_rrt_avoidance" type="FC_pose_tf_publisher.py" name="px4_rrt_avoidance_tf" />
+    <node pkg="px4_rrt_avoidance" type="px4_avoidance_tf_publisher.py" name="px4_avoidance_tf" />
+    <node pkg="px4_rrt_avoidance" type="dynamic_param_reconfigure.py" name="dynamic_parmater" />
+    <node pkg="tf" type="static_transform_publisher" name="camera_static_tf" args="0.1 0 0.1 4.7123889 0 -1.5708  drone camera_depth_frame 100" />
+    <node pkg="octomap_server" type="octomap_server_node" name="octomap_server">
+        <param name="resolution" value="0.5" />
+        <param name="frame_id" type="string" value="map" />
+        <param name="sensor_model/max_range" value="25.0" />
+        <remap from="cloud_in" to="/camera/depth/points" />
+        <param name="occupancy_min_z" type="double" value="1.0" />
+        <param name="height_map" value="true" />
+        <param name="display_voxel" value="true" />
+    </node>
+    <node name="rviz" pkg="rviz" type="rviz" output="screen" args="-d $(find px4_rrt_avoidance)/include/rviz_octomap.rviz" required="false"/>
+    <node pkg="px4_rrt_avoidance" type="drone_in_local_map.py" name="drone_in_map" />
+    <node pkg="px4_rrt_avoidance" type="local_planner.py" name="local_planner" />
+    <node pkg="px4_rrt_avoidance" type="local_map_publisher.py" name="local_map_publisher" />
+    <node pkg="px4_rrt_avoidance" type="companion_computer.py" name="companion_checker" />
+    <node pkg="px4_rrt_avoidance" type="Master_node.py" name="master_node" output="screen" />
+</launch>

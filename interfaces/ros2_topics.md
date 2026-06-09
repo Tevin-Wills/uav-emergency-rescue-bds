@@ -11,11 +11,11 @@ This file defines the shared ROS 2 topic names used across all five project modu
 | Topic | Publisher | Subscriber(s) | Purpose | Message Type |
 |---|---|---|---|---|
 | `/uav/raw_gps` | `rtk_positioning` | `rtk_positioning` | Raw GNSS fix from receiver | `sensor_msgs/NavSatFix` |
-| `/uav/rtk_position` | `rtk_positioning` | `path_planning`, `qgc_control` | RTK-corrected UAV position | `geometry_msgs/PoseStamped` |
+| `/uav/rtk_position` | `rtk_positioning` | `path_planning`, `qgc_control` | RTK-corrected UAV position | `sensor_msgs/NavSatFix` |
 | `/uav/rtk_status` | `rtk_positioning` | `qgc_control` | RTK fix quality (FLOAT/FIXED/NONE) | `std_msgs/String` |
 | `/uav/telemetry` | `qgc_control` | All | UAV state and flight status | `std_msgs/String` (TBD) |
-| `/rescue/beidou_message` | `beidou_short_message` | `qgc_control`, `path_planning` | Decoded BeiDou short message | Custom (see `message_formats.md`) |
-| `/target/emergency_coordinate` | `beidou_short_message` | `qgc_control`, `path_planning` | Target rescue coordinate | Custom (see `coordinate_format.md`) |
+| `/rescue/beidou_message` | `beidou_short_message` | `qgc_control`, `path_planning` | Decoded BeiDou short message | `std_msgs/String` |
+| `/target/emergency_coordinate` | `beidou_short_message` | `qgc_control`, `path_planning` | Target rescue coordinate | `interfaces/EmergencyCoordinate` |
 | `/target/detection` | `target_detection_tracking` | `path_planning` | Whether target is detected | `std_msgs/Bool` |
 | `/target/location` | `target_detection_tracking` | `path_planning` | Target pose estimate | `geometry_msgs/PoseStamped` |
 | `/planner/path` | `path_planning` | `qgc_control` | Planned obstacle-free path | Custom (TBD) |
