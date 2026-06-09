@@ -36,22 +36,17 @@ Final integration will be performed on one main computer running native Ubuntu 2
 
 ## Code Merge Process
 
-Each student develops in their own feature branch:
+The team works on a **single `main` branch** (the `dev` integration branch was retired
+once all modules consolidated onto `main`). Each student keeps their module inside its
+own package under `ros2_ws/src/`.
 
-```
-feature/rtk-positioning
-feature/qgc-control
-feature/target-detection
-feature/path-planning
-feature/beidou-sms
-```
+Workflow:
 
-Merge sequence:
-
-1. Each student opens a pull request into the `dev` branch.
-2. At least one other team member reviews the PR.
-3. Merged code is tested on the integration computer.
-4. When a stable milestone is confirmed, `dev` is merged into `main`.
+1. `git pull` to sync, then commit module work directly to `main` — or use a short-lived
+   branch and open a pull request into `main` for changes you want reviewed first.
+2. At least one other team member reviews any PR before merging.
+3. Integrated code is tested on the integration computer.
+4. `main` always reflects the latest tested integration state.
 
 ---
 

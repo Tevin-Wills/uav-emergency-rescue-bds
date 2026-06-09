@@ -166,20 +166,18 @@ For PX4 SITL, Gazebo, and QGroundControl setup, see the `setup/` folder.
 
 ## Git Workflow
 
+The team works on a **single `main` branch** — all modules live in one tree and are
+integrated continuously. (The earlier `dev` integration branch was retired once work
+consolidated onto `main`.)
+
 ```
-main        ← stable milestones and final integration only
-  └── dev   ← working integration branch
-        ├── feature/rtk-positioning
-        ├── feature/qgc-control
-        ├── feature/target-detection
-        ├── feature/path-planning
-        └── feature/beidou-sms
+main   ← single shared working + integration branch (all modules)
 ```
 
-- Work in your dedicated feature branch.
-- Open a pull request into `dev` when a module milestone is ready.
-- At least one other team member reviews before merging.
-- Merge from `dev` into `main` only at tested integration milestones.
+- Commit your module work directly to `main`, or use a short-lived branch and open a
+  pull request into `main` for anything you want reviewed first.
+- Pull (`git pull`) before you start and before you push, so you stay in sync.
+- Keep each module inside its own package under `ros2_ws/src/` to avoid collisions.
 
 ---
 
