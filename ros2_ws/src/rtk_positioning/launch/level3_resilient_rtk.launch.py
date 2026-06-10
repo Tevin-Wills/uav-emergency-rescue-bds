@@ -30,15 +30,22 @@ from launch.actions import DeclareLaunchArgument, OpaqueFunction
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
-_GZ_NAVSAT_TOPIC = (
-    '/world/default/model/x500_1/link/base_link/sensor/navsat_sensor/navsat'
+# The Gazebo navsat sensor topic embeds the spawned model name, which is
+# "<sim model w/o gz_ prefix>_<PX4 instance>". launch_sim_24.sh uses -i 1, so:
+# gz_x500 -> "x500_1", gz_x500_depth -> "x500_depth_1".
+# The model name is a launch arg (gz_model_name) so both backbones work; the
+# default matches the perception backbone (gz_x500_depth) we run by default.
+_GZ_NAVSAT_TOPIC_TMPL = (
+    '/world/default/model/{model}/link/base_link/sensor/navsat_sensor/navsat'
 )
 _ROS_NAVSAT_TOPIC = '/gz/navsat'
 
 
 def _launch_nodes(context, *args, **kwargs):
-    scenario  = LaunchConfiguration('scenario').perform(context)
-    pkg_share = get_package_share_directory('rtk_positioning')
+    scenario   = LaunchConfiguration('scenario').perform(context)
+    gz_model   = LaunchConfiguration('gz_model_name').perform(context)
+    gz_navsat_topic = _GZ_NAVSAT_TOPIC_TMPL.format(model=gz_model)
+    pkg_share  = get_package_share_directory('rtk_positioning')
 
     base_station_config = os.path.join(pkg_share, 'config', 'base_station.yaml')
     noise_config        = os.path.join(pkg_share, 'config', 'noise_profiles.yaml')
@@ -57,10 +64,10 @@ def _launch_nodes(context, *args, **kwargs):
             executable='parameter_bridge',
             name='gz_navsat_bridge',
             arguments=[
-                f'{_GZ_NAVSAT_TOPIC}@sensor_msgs/msg/NavSatFix[gz.msgs.NavSat'
+                f'{gz_navsat_topic}@sensor_msgs/msg/NavSatFix[gz.msgs.NavSat'
             ],
             remappings=[
-                (_GZ_NAVSAT_TOPIC, _ROS_NAVSAT_TOPIC),
+                (gz_navsat_topic, _ROS_NAVSAT_TOPIC),
             ],
             output='screen',
         ),
@@ -123,6 +130,14 @@ def generate_launch_description():
             description=(
                 'Level 3 scenario to run: '
                 '"compound_disaster" (Run 2, default) or "total_failure" (Run 3)'
+            ),
+        ),
+        DeclareLaunchArgument(
+            'gz_model_name',
+            default_value='x500_depth_1',
+            description=(
+                'Gazebo spawned model name used to build the navsat sensor topic. '
+                'gz_x500_depth -> "x500_depth_1" (default); gz_x500 -> "x500_1".'
             ),
         ),
         OpaqueFunction(function=_launch_nodes),

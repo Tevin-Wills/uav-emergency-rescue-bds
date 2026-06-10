@@ -80,8 +80,8 @@ def generate_launch_description():
             # Model-dependent: with gz_x500_depth confirm via `gz topic -l` on the
             # NATIVE GPU PC (model name may be x500_depth_*, sensor may differ).
             "rgb_gz_topic",
-            default_value="/world/default/model/x500_1/link/camera_link/sensor/IMX214/image",
-            description="Gazebo RGB camera topic to bridge (confirm with `gz topic -l`)."),
+            default_value="/world/default/model/x500_depth_1/link/camera_link/sensor/IMX214/image",
+            description="Gazebo RGB camera topic to bridge (gz_x500_depth model; confirm with `gz topic -l`)."),
 
         # --- Light nodes: the integration backbone, no external deps ---
         # parameters=[datum] injects the shared geographic datum (/** wildcard).
