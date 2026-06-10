@@ -85,20 +85,31 @@ Team members on WSL2 should develop their module in isolation and test it indivi
 
 ## Simulation World
 
-The rescue scenario world file is:
+The active Gazebo world for this project is **`disaster_baylands`**, located at:
 
 ```
-simulation/worlds/earthquake_rescue_world.sdf
+simulation/gz_worlds/disaster_baylands.sdf
 ```
 
-This world includes:
-- Terrain representing a post-earthquake disaster area.
-- `simulation/models/collapsed_building/` — building rubble obstacles.
-- `simulation/models/obstacle_blocks/` — additional obstacles for path planning.
-- `simulation/models/survivor_marker/` — target that `target_detection_tracking` must detect.
-- `simulation/models/landing_pad/` — precision landing target zone.
+This is a Baylands-derived post-disaster rescue survey world containing:
+- Baylands terrain and water base (from PX4's built-in Baylands world).
+- Collapsed building and rubble primitives from `simulation/gz_models/`.
+- High-contrast survivor-person models for UAV camera detection tests.
 
-> World and model files are placeholders. They will be populated during the simulation development phase.
+The file is installed into PX4 as `~/Projects/PX4-Autopilot/Tools/simulation/gz/worlds/disaster_baylands.sdf`. Launch it with:
+
+```bash
+cd ~/Projects/PX4-Autopilot
+PX4_GZ_WORLD=disaster_baylands make px4_sitl gz_x500_depthlight
+```
+
+After CMake refreshes its target list, the direct target is also available:
+
+```bash
+make px4_sitl gz_x500_depthlight_disaster_baylands
+```
+
+See [`simulation/worlds/README.md`](../simulation/worlds/README.md) for full setup and usage details.
 
 ---
 
@@ -118,7 +129,7 @@ missions/
 ## TODO
 
 - [ ] Implement `simulation/launch/full_rescue_sim.launch.py`
-- [ ] Create `simulation/worlds/earthquake_rescue_world.sdf`
+- [x] Create Gazebo world — `simulation/gz_worlds/disaster_baylands.sdf`
 - [ ] Create Gazebo model files for all four models
 - [ ] Add timing diagrams per mission phase
 - [ ] Document abort and return-to-home procedures
