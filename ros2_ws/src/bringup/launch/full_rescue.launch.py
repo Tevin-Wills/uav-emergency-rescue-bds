@@ -31,7 +31,7 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration
+from launch.substitutions import LaunchConfiguration, TextSubstitution
 from launch_ros.actions import Node
 
 
@@ -39,6 +39,13 @@ def generate_launch_description():
     use_rtk = LaunchConfiguration("use_rtk")
     use_detection = LaunchConfiguration("use_detection")
     scenario = LaunchConfiguration("scenario")
+    px4_ns = LaunchConfiguration("px4_ns")
+    # PX4 publishes /fmu/* under its instance namespace (launch_sim_24.sh uses -i 1
+    # -> px4_1). target_detection's local-pose topic is built from this.
+    # NOTE: this PX4 build uses versioned topics with a "_v1" suffix
+    # (/px4_1/fmu/out/vehicle_local_position_v1, type px4_msgs/VehicleLocalPosition).
+    # If a different PX4 version is used, adjust the suffix here.
+    local_pos_topic = ["/", px4_ns, "/fmu/out/vehicle_local_position_v1"]
 
     # Shared geographic datum applied to every node (/** wildcard in the file).
     datum = os.path.join(get_package_share_directory("bringup"), "config", "datum.yaml")
@@ -59,6 +66,9 @@ def generate_launch_description():
         DeclareLaunchArgument(
             "scenario", default_value="compound_disaster",
             description="RTK Level 3 scenario: compound_disaster | total_failure."),
+        DeclareLaunchArgument(
+            "px4_ns", default_value="px4_1",
+            description="PX4 uXRCE instance namespace (launch_sim_24.sh uses -i 1 -> px4_1)."),
 
         # --- Light nodes: the integration backbone, no external deps ---
         # parameters=[datum] injects the shared geographic datum (/** wildcard).
@@ -82,8 +92,10 @@ def generate_launch_description():
             condition=IfCondition(use_rtk)),
 
         # --- Heavy real node: target_detection (needs camera + PX4 local pose) ---
+        # local_position_topic is remapped to the PX4 instance namespace (px4_ns).
         Node(
             package="target_detection_tracking", executable="target_detection_node",
-            name="target_detection_node", output="screen", parameters=[datum],
+            name="target_detection_node", output="screen",
+            parameters=[datum, {"local_position_topic": local_pos_topic}],
             condition=IfCondition(use_detection)),
     ])

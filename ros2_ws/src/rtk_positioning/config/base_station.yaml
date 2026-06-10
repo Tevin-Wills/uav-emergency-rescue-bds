@@ -1,12 +1,12 @@
 base_station_node:
   ros__parameters:
-    base_station.latitude: 39.981000
-    base_station.longitude: 116.344000
+    base_station.latitude: 47.397971057728981
+    base_station.longitude: 8.5461637398001447
     base_station.altitude: 50.0
     base_station.frame_id: "base_station"
 
 rtk_positioning_node:
   ros__parameters:
-    base_station.latitude: 39.981000
-    base_station.longitude: 116.344000
+    base_station.latitude: 47.397971057728981
+    base_station.longitude: 8.5461637398001447
     base_station.altitude: 50.0
