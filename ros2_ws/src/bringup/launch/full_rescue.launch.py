@@ -40,6 +40,7 @@ def generate_launch_description():
     use_detection = LaunchConfiguration("use_detection")
     scenario = LaunchConfiguration("scenario")
     px4_ns = LaunchConfiguration("px4_ns")
+    rgb_gz_topic = LaunchConfiguration("rgb_gz_topic")
     # PX4 publishes /fmu/* under its instance namespace (launch_sim_24.sh uses -i 1
     # -> px4_1). target_detection's local-pose topic is built from this.
     # NOTE: this PX4 build uses versioned topics with a "_v1" suffix
@@ -55,6 +56,12 @@ def generate_launch_description():
     rtk_launch = os.path.join(
         get_package_share_directory("rtk_positioning"),
         "launch", "level3_resilient_rtk.launch.py")
+    # target_detection's own launch brings up the camera + depth ros_gz bridges AND
+    # the detection node — we include it (like RTK) rather than the bare node, which
+    # would have no image feed.
+    td_launch = os.path.join(
+        get_package_share_directory("target_detection_tracking"),
+        "launch", "target_detection_sim.launch.py")
 
     return LaunchDescription([
         DeclareLaunchArgument(
@@ -69,6 +76,12 @@ def generate_launch_description():
         DeclareLaunchArgument(
             "px4_ns", default_value="px4_1",
             description="PX4 uXRCE instance namespace (launch_sim_24.sh uses -i 1 -> px4_1)."),
+        DeclareLaunchArgument(
+            # Model-dependent: with gz_x500_depth confirm via `gz topic -l` on the
+            # NATIVE GPU PC (model name may be x500_depth_*, sensor may differ).
+            "rgb_gz_topic",
+            default_value="/world/default/model/x500_1/link/camera_link/sensor/IMX214/image",
+            description="Gazebo RGB camera topic to bridge (confirm with `gz topic -l`)."),
 
         # --- Light nodes: the integration backbone, no external deps ---
         # parameters=[datum] injects the shared geographic datum (/** wildcard).
@@ -91,11 +104,16 @@ def generate_launch_description():
             launch_arguments={"scenario": scenario}.items(),
             condition=IfCondition(use_rtk)),
 
-        # --- Heavy real node: target_detection (needs camera + PX4 local pose) ---
-        # local_position_topic is remapped to the PX4 instance namespace (px4_ns).
-        Node(
-            package="target_detection_tracking", executable="target_detection_node",
-            name="target_detection_node", output="screen",
-            parameters=[datum, {"local_position_topic": local_pos_topic}],
+        # --- Perception: target_detection's own launch (camera+depth bridges + node) ---
+        # Included like RTK; starts the RGB + depth ros_gz bridges and points the node
+        # at the PX4 instance-namespaced, versioned local-position topic.
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(td_launch),
+            launch_arguments={
+                "local_position_topic": local_pos_topic,
+                "rgb_gz_topic": rgb_gz_topic,
+                "start_rgb_bridge": "true",
+                "start_depth_bridge": "true",
+            }.items(),
             condition=IfCondition(use_detection)),
     ])

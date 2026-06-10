@@ -22,6 +22,7 @@ def generate_launch_description():
     start_depth_bridge = LaunchConfiguration("start_depth_bridge")
     model_path = LaunchConfiguration("model_path")
     confidence_threshold = LaunchConfiguration("confidence_threshold")
+    local_position_topic = LaunchConfiguration("local_position_topic")
 
     rgb_bridge_arg = PythonExpression([
         "'",
@@ -70,6 +71,12 @@ def generate_launch_description():
             default_value="0.25",
             description="YOLO confidence threshold",
         ),
+        DeclareLaunchArgument(
+            "local_position_topic",
+            default_value="/fmu/out/vehicle_local_position",
+            description="PX4 local-position topic. Under a uXRCE instance namespace "
+                        "and versioned topics this is e.g. /px4_1/fmu/out/vehicle_local_position_v1.",
+        ),
 
         ExecuteProcess(
             condition=IfCondition(start_rgb_bridge),
@@ -108,6 +115,7 @@ def generate_launch_description():
                 {
                     "rgb_topic": rgb_topic,
                     "depth_topic": depth_topic,
+                    "local_position_topic": local_position_topic,
                     "model_path": model_path,
                     "confidence_threshold": ParameterValue(
                         confidence_threshold,

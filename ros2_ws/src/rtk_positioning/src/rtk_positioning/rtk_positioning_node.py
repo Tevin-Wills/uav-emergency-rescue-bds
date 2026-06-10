@@ -47,12 +47,13 @@ import rclpy
 from rclpy.node import Node
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import NavSatFix, NavSatStatus
-from std_msgs.msg import String, Float32MultiArray
+from std_msgs.msg import String, Float32, Float32MultiArray
 
 from rtk_positioning.gnss_noise_model import GnssNoiseModel
 from rtk_positioning.rtk_correction_model import RtkCorrectionModel
-from rtk_positioning.coordinate_transform import enu_to_wgs84
+from rtk_positioning.coordinate_transform import enu_to_wgs84, wgs84_to_enu
 from rtk_positioning.rtk_status_manager import RtkStatusManager
+from rtk_positioning import rtk_error_model
 from interfaces.msg import SimulatedRtcm
 
 # Drift rate applied to CORRECTION_LOST uncertainty (metres per second without corrections).
@@ -87,9 +88,32 @@ class RtkPositioningNode(Node):
         self.declare_parameter('viability_approach_threshold_m',  2.0)
         self.declare_parameter('viability_landing_threshold_m',   0.3)
 
+        # ── Realistic offset base station + RTK error budget (opt-in) ─────────
+        # world_origin is the ENU/output anchor (where the drone's metres are
+        # measured from) — MUST match px4_pose_adapter's world_origin. The base
+        # station is then a SEPARATE coordinate, free to be offset from the drone.
+        self.declare_parameter('world_origin.latitude',  47.397971057728981)
+        self.declare_parameter('world_origin.longitude', 8.5461637398001447)
+        self.declare_parameter('world_origin.altitude',  0.0)
+        # When False (default), behaviour is identical to before (L3 reproducible):
+        # output is anchored on world_origin (== base when co-located) and no
+        # baseline error/state degradation is applied.
+        self.declare_parameter('enable_baseline_error_model', False)
+        self.declare_parameter('rtk_baseline_ppm',        1.0)    # mm per km (1 ppm)
+        self.declare_parameter('baseline_fixed_limit_km', 20.0)   # > this: cannot hold FIXED
+        self.declare_parameter('baseline_max_km',         50.0)   # > this: GNSS only
+
         self._base_lat = self.get_parameter('base_station.latitude').value
         self._base_lon = self.get_parameter('base_station.longitude').value
         self._base_alt = self.get_parameter('base_station.altitude').value
+
+        self._origin_lat = self.get_parameter('world_origin.latitude').value
+        self._origin_lon = self.get_parameter('world_origin.longitude').value
+        self._origin_alt = self.get_parameter('world_origin.altitude').value
+        self._enable_baseline_model   = self.get_parameter('enable_baseline_error_model').value
+        self._baseline_ppm            = self.get_parameter('rtk_baseline_ppm').value
+        self._baseline_fixed_limit_km = self.get_parameter('baseline_fixed_limit_km').value
+        self._baseline_max_km         = self.get_parameter('baseline_max_km').value
 
         self._noise_model = GnssNoiseModel(seed=42)
         self._noise_model.update_from_config({
@@ -136,6 +160,7 @@ class RtkPositioningNode(Node):
         self._pub_accuracy      = self.create_publisher(Float32MultiArray, '/rtk/accuracy',             10)
         self._pub_error_metrics = self.create_publisher(Float32MultiArray, '/rtk/error_metrics',       10)
         self._pub_viability     = self.create_publisher(String,            '/rtk/mission_viability',   10)
+        self._pub_baseline      = self.create_publisher(Float32,           '/rtk/baseline_km',         10)
 
         mode = (
             'Level 3 — resilient RTK / disaster scenario'
@@ -193,31 +218,63 @@ class RtkPositioningNode(Node):
             msg.pose.pose.position.z,
         ])
 
+        # Baseline = horizontal distance from the base station to the drone,
+        # both in ENU about the world origin (informational when the model is off).
+        baseline_km = self._compute_baseline_km(true_pos)
+
+        # Raw GNSS (standalone, baseline-independent) — drawn first so the noise
+        # sequence is unchanged vs. the previous implementation.
         raw_pos = self._correction_model.apply_raw_gnss(true_pos)
-        rtk_pos = self._correction_model.apply_correction(true_pos, rtk_status)
+
+        baseline_term_m = 0.0
+        if self._enable_baseline_model:
+            # Fix state degrades realistically with baseline (recoverable).
+            rtk_status = rtk_error_model.degrade_status_for_baseline(
+                rtk_status, baseline_km,
+                self._baseline_fixed_limit_km, self._baseline_max_km)
+            self._status_manager.force_status(rtk_status)
+            baseline_term_m = rtk_error_model.baseline_term_m(baseline_km, self._baseline_ppm)
+            # Inject error consistent with the budget (status floor + baseline term).
+            floor_std = self._noise_model.get_std(rtk_status)
+            sigma_inj = rtk_error_model.rtk_sigma_m(floor_std, baseline_km, self._baseline_ppm)
+            rtk_pos = self._noise_model.apply_noise_value(true_pos, sigma_inj)
+        else:
+            rtk_pos = self._correction_model.apply_correction(true_pos, rtk_status)
 
         raw_error_m = float(np.linalg.norm(raw_pos - true_pos))
         rtk_error_m = float(np.linalg.norm(rtk_pos - true_pos))
 
+        # Output anchored on the WORLD ORIGIN (not the base) so the reported
+        # position is correct regardless of where the base station sits.
         raw_lat, raw_lon, raw_alt = enu_to_wgs84(
-            self._base_lat, self._base_lon, self._base_alt,
+            self._origin_lat, self._origin_lon, self._origin_alt,
             raw_pos[0], raw_pos[1], raw_pos[2])
 
         rtk_lat, rtk_lon, rtk_alt = enu_to_wgs84(
-            self._base_lat, self._base_lon, self._base_alt,
+            self._origin_lat, self._origin_lon, self._origin_alt,
             rtk_pos[0], rtk_pos[1], rtk_pos[2])
 
         stamp = now.to_msg()
         raw_std, rtk_std = self._get_uncertainty(rtk_status)
+        if self._enable_baseline_model:
+            rtk_std = float(np.hypot(rtk_std, baseline_term_m))
 
         self._publish_raw_gps(stamp, raw_lat, raw_lon, raw_alt, raw_std)
         self._publish_rtk_position(stamp, rtk_lat, rtk_lon, rtk_alt, rtk_std)
         self._publish_rtk_status(rtk_status, rtk_std)
         self._publish_accuracy(raw_std, rtk_std)
         self._publish_error_metrics(raw_error_m, rtk_error_m)
+        self._pub_baseline.publish(Float32(data=float(baseline_km)))
 
         if self._use_dynamic_uncertainty:
             self._publish_mission_viability(rtk_std)
+
+    def _compute_baseline_km(self, true_pos):
+        """Horizontal base->drone distance (km), both in ENU about the world origin."""
+        base_e, base_n, _ = wgs84_to_enu(
+            self._origin_lat, self._origin_lon, self._origin_alt,
+            self._base_lat, self._base_lon, self._base_alt)
+        return float(np.hypot(true_pos[0] - base_e, true_pos[1] - base_n)) / 1000.0
 
     # ── Level 2 status derivation ─────────────────────────────────────────────
 

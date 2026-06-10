@@ -42,6 +42,18 @@ class GnssNoiseModel:
         noise = self._rng.normal(0.0, std, size=3)
         return position_m + noise
 
+    def apply_noise_value(self, position_m, std):
+        """
+        Add Gaussian noise with an explicit standard deviation (metres).
+
+        Used by the RTK error-budget model so the injected error matches the
+        reported sigma (baseline/quality/age dependent) rather than a fixed
+        per-status value. Draws 3 samples from the same RNG as apply_noise so
+        reproducibility is preserved.
+        """
+        noise = self._rng.normal(0.0, std, size=3)
+        return position_m + noise
+
     def get_std(self, mode='GNSS_ONLY'):
         """Return the noise standard deviation in meters for a given mode."""
         return NOISE_STD_M.get(mode, NOISE_STD_M['GNSS_ONLY'])
