@@ -1,6 +1,39 @@
 # Two-Day System Integration Plan — UAV Emergency Rescue (BDS)
 
-_Last updated: 2026-06-09. Owner: Student 1 (Tevin Wills). Status: execution started (Stage 1 integration). Dashboard added as 3-stage end goal._
+_Last updated: 2026-06-10. Owner: Student 1 (Tevin Wills). Status: integration software + wiring COMPLETE & pushed; backbone bring-up check PASSED (RTK tier, WSL); native-PC runbook ready. Remaining = perception tier on native GPU PC + the progress report._
+
+> ℹ️ The "2-day" title is historical — the work outgrew that sprint. See **Latest status** below for the
+> current source of truth; the Day 1/Day 2 blocks further down are kept as history.
+
+## ✅ Latest status (2026-06-10) — CURRENT SOURCE OF TRUTH
+
+All work committed + pushed to `main` (latest commit `a293529`). Builds 8/8.
+
+**Done since the last plan revision:**
+- **Backbone bring-up check PASSED on WSL** (RTK config): PX4 SITL + Gazebo Harmonic (gz_x500, headless)
+  + micro-XRCE-DDS agent all run; real RTK verified — `/uav/rtk_position` @10Hz `RTK_FIXED 3.3cm`,
+  `/rtk/mission_viability` live, and the **landing gate fired on REAL viability** (not the sim publisher).
+- **Bugs found + fixed:** #19 `base_station.yaml` datum (was Beijing → ~7800km baseline; now Zurich, so
+  `/uav/rtk_position` is correct); #20 PX4 `-i 1` namespace `/px4_1/*` + versioned `_v1` topics (bringup
+  now points target_detection at `/px4_1/fmu/out/vehicle_local_position_v1`).
+- **#21 realistic offset-base RTK error-budget model BUILT** (`rtk_error_model.py`): σ = √(floor² +
+  (baseline·ppm)² + age²) + baseline-driven FIXED→FLOAT→GNSS; output anchored on world_origin (not base);
+  `/rtk/baseline_km` published. **Default OFF → L3 byte-reproducible.** Calibratable vs RTKLIB.
+- **Perception wiring DONE:** bringup `full_rescue.launch.py` now *includes* `target_detection_sim.launch.py`
+  (RGB + depth ros_gz bridges + node) when `use_detection:=true` — mirrors the RTK fix.
+- **Tooling/docs:** `scripts/launch_sim_24.sh` (shared, `SIM_MODEL`-parameterized) +
+  **`docs/NATIVE_PC_RUNBOOK.md`** (the strict native-PC operations manual, incl. data-storage locations).
+
+**Remaining work (prioritised):**
+1. 🔴 **Native GPU PC — full 5-module run** (the perception tier): follow `docs/NATIVE_PC_RUNBOOK.md` —
+   `SIM_MODEL=gz_x500_depth`, confirm RGB/navsat topic names (`gz topic -l`), `pip install ultralytics torch`,
+   then `ros2 launch bringup full_rescue.launch.py …`. Capture data to `results/`.
+2. 🔴 **The progress report / presentation** for the review — the actual graded deliverable. Fold in the
+   RTK error-budget explanation, the integration architecture, and the run results. **Not yet assembled.**
+3. 🟡 **Stage 2 — Foxglove ops view** — now feasible for the RTK/control tier already live; full value on native PC.
+4. ⏳ **C4 — flight loop** (uXRCE offboard `/planner/path` → `/fmu/in/trajectory_setpoint`); review fallback = QGC mission mode.
+5. ⏳ **U1 — path_planning synthetic grid → live depth costmap** (GitHub issue #1), once perception backbone solid.
+6. ⏳ **Stage 3 — custom web dashboard** (after Foxglove validates the flow).
 
 ## Goal
 A live, end-to-end ROS 2 demo of the rescue pipeline:
@@ -47,11 +80,10 @@ strict — each stage is gated by the previous one being live:
 | `path_planning` | ✅ **Real** — salvaged RRT\* on synthetic grid (`path_planning_node`) | `/planner/path`, `/map/obstacles` | `/mission/status`, `/target/emergency_coordinate`, `/uav/rtk_position` |
 | `bringup` / `full_rescue_sim.launch.py` | ✅ **Done** — `full_rescue.launch.py` launches all 5; sim wrapper delegates to it | — | — |
 
-**Status (2026-06-09):** all 5 modules are ROS 2 and build (8/8 pkgs). The **control-plane flows
-end-to-end** (BeiDou → mission state machine → RRT\* path), verified via stubs-only smoke test.
-**Critical-path dependency remaining:** the heavy real nodes (RTK L3, target_detection) need the
-**PX4 SITL + Gazebo Harmonic + micro-XRCE-DDS + camera/depth backbone** — not yet stood up, still the
-hardest part (Block A). target_detection's `/mission/status` input is now satisfied by `qgc_control`.
+**Status (superseded — see "Latest status (2026-06-10)" at the top):** all 5 modules build (8/8). Control
+plane verified headless **and** the RTK tier verified on the real backbone (WSL bring-up check passed).
+The remaining heavy tier is **target_detection**, which needs the **camera/depth backbone on a native GPU
+PC** (WSL OpenGL is software `llvmpipe`) + `ultralytics`/`torch`. See `docs/NATIVE_PC_RUNBOOK.md`.
 
 ## Strategy: real anchors + thin stubs (sanctioned by `docs/integration_plan.md` contingency clause)
 Keep the two real nodes (RTK, target_detection). Fill the three gaps (qgc_control, path_planning, beidou)
