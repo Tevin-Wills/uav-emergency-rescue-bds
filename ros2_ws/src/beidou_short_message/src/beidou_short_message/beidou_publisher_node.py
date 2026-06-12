@@ -12,11 +12,20 @@ The emergency coordinate is published with TRANSIENT_LOCAL (latched) QoS so that
 qgc_control / path_planning still receive the distress coordinate even if they
 start after this node. It is also re-published on a timer as a heartbeat.
 
-Decode logic mirrors scripts/decode_ascii.py (message format:
-$CCTXM,<destID>,LAT:<lat>,LON:<lon>*<checksum>).
+Decode logic mirrors scripts/decode_ascii.py and scripts/decode_binary.py.
+Supported message formats:
+  ASCII : $CCTXM,<destID>,LAT:<lat>,LON:<lon>*<checksum>
+  Binary: $CCTXM,<destID>,BIN:<hex>*<checksum>
+          112-bit rescue payload (14 bytes, >iihHBB): lat/lon x1e7, alt m,
+          uncertainty R cm, priority, survivor_id — or legacy 64-bit (8 bytes,
+          >ii): lat/lon x1e4.
+The extra rescue fields (alt/R/priority/survivor_id) are logged but not yet
+published — EmergencyCoordinate.msg carries lat/lon only until the interface
+extension is agreed with the group.
 """
 
 import math
+import struct
 
 import rclpy
 from rclpy.node import Node
@@ -43,17 +52,50 @@ def build_cctxm(source_id, lat: float, lon: float) -> str:
     return f"$CCTXM,{source_id},LAT:{lat:.4f},LON:{lon:.4f}*XX"
 
 
-def decode_ascii(msg: str):
-    """Parse $CCTXM,<destID>,LAT:<lat>,LON:<lon>*CS -> (lat, lon, source_id) or (None, None, None)."""
+def decode_binary_payload(hex_str: str):
+    """Decode a BIN:<hex> payload -> dict with lat/lon (+ rescue fields) or None.
+
+    14 bytes = 112-bit rescue payload: lat,lon (int32 x1e7), alt (int16 m),
+    R (uint16 cm), priority (uint8), survivor_id (uint8).
+    8 bytes  = legacy coordinate-only payload: lat,lon (int32 x1e4)."""
+    try:
+        raw = bytes.fromhex(hex_str)
+    except ValueError:
+        return None
+    if len(raw) == 14:
+        lat_i, lon_i, alt, r_cm, priority, survivor_id = struct.unpack(">iihHBB", raw)
+        return {
+            "lat": lat_i / 1e7, "lon": lon_i / 1e7, "alt_m": float(alt),
+            "uncertainty_m": r_cm / 100.0, "priority": priority,
+            "survivor_id": survivor_id,
+        }
+    if len(raw) == 8:
+        lat_i, lon_i = struct.unpack(">ii", raw)
+        return {"lat": lat_i / 1e4, "lon": lon_i / 1e4}
+    return None
+
+
+def decode_message(msg: str):
+    """Parse an ASCII or binary $CCTXM message.
+
+    Returns (lat, lon, source_id, extras) where extras is a dict of rescue
+    fields (alt_m/uncertainty_m/priority/survivor_id) when present, or
+    (None, None, None, None) if the message cannot be decoded."""
     try:
         clean = msg.split("*")[0].strip()
         parts = clean.split(",")
         source_id = parts[1]
+        if parts[2].startswith("BIN:"):
+            decoded = decode_binary_payload(parts[2][4:])
+            if decoded is None:
+                return None, None, None, None
+            extras = {k: v for k, v in decoded.items() if k not in ("lat", "lon")}
+            return decoded["lat"], decoded["lon"], source_id, extras
         lat = float(parts[2].split(":")[1])
         lon = float(parts[3].split(":")[1])
-        return lat, lon, source_id
+        return lat, lon, source_id, {}
     except (IndexError, ValueError):
-        return None, None, None
+        return None, None, None, None
 
 
 class BeidouPublisherNode(Node):
@@ -103,14 +145,20 @@ class BeidouPublisherNode(Node):
         self._pub_raw = self.create_publisher(
             String, "/rescue/beidou_message", latched)
 
-        lat, lon, source_id = decode_ascii(self.raw_message)
+        lat, lon, source_id, extras = decode_message(self.raw_message)
         if lat is None:
             self.get_logger().error(
                 f"Could not decode BeiDou message: {self.raw_message!r}. Node will idle.")
             self._coord_msg = None
         else:
             self.get_logger().info(
-                f"Decoded distress coordinate: lat={lat:.4f}, lon={lon:.4f} (src {source_id})")
+                f"Decoded distress coordinate: lat={lat:.7f}, lon={lon:.7f} (src {source_id})")
+            if extras:
+                self.get_logger().info(
+                    "Rescue payload fields (not yet in EmergencyCoordinate.msg): "
+                    f"alt={extras.get('alt_m')}m R={extras.get('uncertainty_m')}m "
+                    f"priority=P{extras.get('priority')} "
+                    f"survivor_id={extras.get('survivor_id')}")
             self._coord_msg = self._build_coord(lat, lon, source_id)
             self._raw_msg = String(data=self.raw_message)
             self._publish_once()
