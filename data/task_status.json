@@ -1,0 +1,138 @@
+[
+ {
+  "col": "now",
+  "t": "Open the PR (node/binary-decode) and tag the team",
+  "d": "github.com/Tevin-Wills/uav-emergency-rescue-bds/pull/new/node/binary-decode",
+  "min": "2 min"
+ },
+ {
+  "col": "now",
+  "t": "Portal tokens -> portal_reader.py --dump",
+  "d": "bdrd.hwasmart.com login, F12 > Local Storage > data/access_token/refresh_token into portal_config.json",
+  "min": "5 min"
+ },
+ {
+  "col": "now",
+  "t": "Message group + book .msg extension slot",
+  "d": "Proposal pack ready: Paper1_Sections.md Section E",
+  "min": "5 min"
+ },
+ {
+  "col": "now",
+  "t": "Verify R5 + R6 references at library",
+  "d": "COSPAS-SARSAT latency figures + LoRa coverage study \u2014 only two VERIFY items left in Paper1_Sections A.3",
+  "min": "30 min"
+ },
+ {
+  "col": "done",
+  "t": "References resolved (R1-R6)",
+  "d": "BDS-3 GSMC paper = Advances in Space Research 67(5) 2021 (journal corrected); only R5/R6 still marked VERIFY",
+  "min": "1-2 evenings"
+ },
+ {
+  "col": "done",
+  "t": "Write Paper 1 Sections I-IV",
+  "d": "Drafted in BDS_SMC2_Paper1_Draft.md \u2014 intro, related work, system design, methodology",
+  "min": "2-3 evenings"
+ },
+ {
+  "col": "done",
+  "t": "Update generate_presentation.py numbers",
+  "d": "All numbers now 112-bit/232-TX/Wilson; regenerate slides after field day",
+  "min": "30 min"
+ },
+ {
+  "col": "now",
+  "t": "Print field sheet + pick field day",
+  "d": "BDS-SMC2_Field_Sheet.pdf (4 sheets); slots 08-10h, 12-14h, 18h+; optional USB power meter",
+  "min": "10 min"
+ },
+ {
+  "col": "waiting",
+  "t": "PR review + merge by team",
+  "d": "3-file diff inside beidou_short_message only",
+  "min": "team"
+ },
+ {
+  "col": "waiting",
+  "t": ".msg extension decision",
+  "d": "4 additive fields: altitude, uncertainty_m, priority, survivor_id",
+  "min": "group meeting"
+ },
+ {
+  "col": "waiting",
+  "t": "Ubuntu integration session",
+  "d": "colcon build + verify_integration.sh (expect 3/3)",
+  "min": "with group"
+ },
+ {
+  "col": "hardware",
+  "t": "Flash MODE 1 + morning session (30 TX)",
+  "d": "TX #1 = 112-bit acceptance + on-air bit check; run_gap2_morning.bat",
+  "min": "08-10h"
+ },
+ {
+  "col": "hardware",
+  "t": "Midday session (30 TX) + power",
+  "d": "run_gap2_midday.bat; USB meter optional",
+  "min": "12-14h"
+ },
+ {
+  "col": "hardware",
+  "t": "Evening session (30 TX)",
+  "d": "run_gap2_evening.bat \u2014 same day",
+  "min": "18h+"
+ },
+ {
+  "col": "hardware",
+  "t": "Run ANOVA + regenerate figures",
+  "d": "gap2_analysis.py --plot; Paper 1 evidence complete",
+  "min": "evening"
+ },
+ {
+  "col": "hardware",
+  "t": "Dashboard evidence screenshots",
+  "d": "CONFIRMED bit-perfect rows + black-box dt (fixes audit risk #3)",
+  "min": "during"
+ },
+ {
+  "col": "done",
+  "t": "112-bit rescue payload (firmware + decoders)",
+  "d": "Round-trip bit-perfect on lab T001-T006"
+ },
+ {
+  "col": "done",
+  "t": "Gap 3 audited: 232/232, Wilson >=93.7%",
+  "d": "chi2=0, p=1.0; exclusion appendix drafted from real rows"
+ },
+ {
+  "col": "done",
+  "t": "ROS 2 node: 3-format decode + runbook + verify script",
+  "d": "Pushed as PR branch node/binary-decode"
+ },
+ {
+  "col": "done",
+  "t": "Portal API reverse-engineered + portal_reader.py",
+  "d": "Token auth with auto-refresh; awaiting tokens"
+ },
+ {
+  "col": "done",
+  "t": "Live TX dashboard (+ --sim presentation mode)",
+  "d": "Payload journey, bit-perfect matching, black-box dt, in-flight row"
+ },
+ {
+  "col": "done",
+  "t": "Defence sections drafted (risks 1,4,5,8,9)",
+  "d": "Comparison table, RTK framing, Wilson claim, repeat-TX policy, .msg pack"
+ },
+ {
+  "col": "done",
+  "t": "Option B field plan + PDFs updated",
+  "d": "Paper Plan Rev.2, 4-sheet field sheet, progress report; ASCII baseline archived"
+ },
+ {
+  "col": "done",
+  "t": "Both branches pushed to GitHub",
+  "d": "node/bds-smc2 (workspace) + node/binary-decode (PR)"
+ }
+]

@@ -12,17 +12,26 @@
 |---|---|---|---|---|---|
 | Surviving ground infrastructure required | Cell towers + backhaul + power | Gateway within link range + backhaul | None (satellite) | None (satellite) | **None (satellite)** |
 | Works when terrestrial networks destroyed | ✗ | ✗ (gateway is terrestrial) | ✓ | ✓ | **✓** |
-| Custom data payload | ✓ (SMS 1120 bits) | ✓ (~51–222 B regional duty-cycle limits) [CITE: LoRaWAN regional params] | ✗ — fixed distress format, no user fields [CITE: C/S T.001 spec] | ✓ (340 B MO) [CITE: Iridium SBD spec] | **✓ 210 bits regional / 560 bits global** [CITE: BDS-3 GSMC intro, Geodesy & Geodynamics 2021] |
-| Survivor-to-rescuer latency | Seconds (if network alive) | Seconds (if gateway alive) | Minutes–hours (LEOSAR/GEOSAR pass + MCC routing) [CITE] | Seconds–minutes | **2.57 s mean measured (n=30)** |
-| Position precision conveyed | Cell/AGPS-dependent | Payload-defined | Encoded position ~±2 min lat/lon in message; refined by Doppler/GNSS [CITE] | Payload-defined | **~1 cm encoding (7 dp fixed-point)** |
-| Per-message cost | Carrier SMS | Free (own infra) | Free (treaty service) | Per-message commercial fee | Service-subscription [CITE: regional service terms] |
-| Two-way | ✓ | ✓ | ✗ (one-way alert; RLS ack rolling out) [CITE] | ✓ | Partially (RDSS supports receive; not exercised here) |
+| Custom data payload | ✓ (SMS 1120 bits) | ✓ (51–242 B by region/data-rate) [R2] | ✗ — fixed distress format, no user fields [R3] | ✓ (340 B MO) [R4] | **✓ 210 bits regional / 560 bits global** [R1] |
+| Survivor-to-rescuer latency | Seconds (if network alive) | Seconds (if gateway alive) | Minutes–hours (LEOSAR/GEOSAR pass + MCC routing) [R5 — VERIFY exact figures] | Seconds–minutes | **2.57 s mean measured (n=30)** |
+| Position precision conveyed | Cell/AGPS-dependent | Payload-defined | Coarse encoded position; refined by Doppler/GNSS [R3] | Payload-defined | **~1 cm encoding (7 dp fixed-point)** |
+| Per-message cost | Carrier SMS | Free (own infra) | Free (treaty service) | Per-message commercial fee | Service-subscription [VERIFY: regional service terms] |
+| Two-way | ✓ | ✓ | ✗ (one-way alert; Galileo RLS return link emerging) [R5 — VERIFY] | ✓ | Partially (RDSS supports receive; not exercised here) |
 | Triage fields (ID, priority, uncertainty) | Possible, network-dependent | Possible | ✗ | Possible | **✓ demonstrated in 112 bits** |
-| Field-measured delivery reliability in this class | n/a | Published gateway studies [CITE: LoRa coverage study] | Published system stats [CITE] | Published | **232/232 across 4 environments (this work); 97.72% over 2149 TX (system-level) [CITE: BDS-3 GSMC intro]** |
+| Field-measured delivery reliability in this class | n/a | Published gateway studies [R6 — VERIFY] | Published system stats [R5] | Published | **232/232 across 4 environments (this work); 97.72% over 2149 TX (system-level) [R1]** |
 
 ### A.2 The paragraph that goes under it
 
-> Among systems usable when terrestrial infrastructure is destroyed, only COSPAS-SARSAT, commercial satellite messaging (e.g., Iridium SBD), and BDS SMC remain. COSPAS-SARSAT provides no user-defined payload: a beacon can say *where* it is, but not *who* needs help, *how urgently*, or *how precise the fix is* — the triage fields shown in this work to fit within a single 112-bit BDS-3 message. Commercial satellite messaging carries arbitrary payloads but imposes per-message costs and proprietary infrastructure. BDS-3 SMC occupies a distinct position: treaty-grade independence from ground infrastructure, a user-defined payload sufficient for complete rescue triage, and — as measured here — single-digit-second delivery latency. The system-level field campaign of [CITE: BDS-3 GSMC intro] reported 97.72% delivery over 2149 transmissions; the present work complements it with an environment-stratified measurement (open sky, light canopy, urban canyon, indoor) at the application layer.
+> Among systems usable when terrestrial infrastructure is destroyed, only COSPAS-SARSAT, commercial satellite messaging (e.g., Iridium SBD), and BDS SMC remain. COSPAS-SARSAT provides no user-defined payload: a beacon can say *where* it is, but not *who* needs help, *how urgently*, or *how precise the fix is* — the triage fields shown in this work to fit within a single 112-bit BDS-3 message. (A pointed coincidence: the COSPAS-SARSAT short-format message is itself 112 bits [R3] — the same budget that here carries a complete six-field triage payload.) Commercial satellite messaging carries arbitrary payloads but imposes per-message costs and proprietary infrastructure. BDS-3 SMC occupies a distinct position: treaty-grade independence from ground infrastructure, a user-defined payload sufficient for complete rescue triage, and — as measured here — single-digit-second delivery latency. The system-level field campaign of Li et al. [R1] reported 97.72% delivery over 2149 transmissions; the present work complements it with an environment-stratified measurement (open sky, light canopy, urban canyon, indoor) at the application layer.
+
+### A.3 References for this section (verified 2026-06-13 unless marked VERIFY)
+
+- **[R1]** Li G., Guo S., Lv J., Zhao K., He Z., "Introduction to global short message communication service of BeiDou-3 navigation satellite system," *Advances in Space Research*, 67(5):1701–1708, 2021. doi:10.1016/j.asr.2020.12.011. ⚠ NOTE: earlier project notes wrongly attributed this to "Geodesy and Geodynamics" — corrected.
+- **[R2]** LoRa Alliance, *RP002-1.0.4 LoRaWAN Regional Parameters*, 2022. (Max application payload 51–242 B depending on region/data rate — confirm exact table values against the spec PDF.)
+- **[R3]** COSPAS-SARSAT, *C/S T.001: Specification for COSPAS-SARSAT 406 MHz Distress Beacons*. (Short format = 112 data bits, long = 144; user protocols carry ID, not arbitrary payload.) cospas-sarsat.int
+- **[R4]** Iridium, *Short Burst Data (SBD) Service* — 9602/9603 transceiver: 340 B mobile-originated max. iridium.com/services/iridium-sbd
+- **[R5]** COSPAS-SARSAT system documentation / NOAA SARSAT training material — **VERIFY latency figures** before quoting minutes–hours.
+- **[R6]** LoRa range/coverage evaluation study — candidate: Petäjäjärvi et al., "On the coverage of LPWANs," ITST 2015 — **VERIFY before citing**.
 
 ---
 
@@ -95,4 +104,4 @@ uint8   survivor_id     # 0-255 victim identifier, 0 if unassigned
 
 ---
 
-*All numeric claims in this document re-verified against the raw datasets on 2026-06-12 (audit in `BDS_SMC2_Node_Evaluation.md`). Replace every `[CITE: …]` before submission.*
+*All numeric claims in this document re-verified against the raw datasets on 2026-06-12 (audit in `BDS_SMC2_Node_Evaluation.md`). References resolved 2026-06-13 (Section A.3); only items marked **VERIFY** still need checking against the primary documents before submission.*

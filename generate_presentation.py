@@ -50,8 +50,8 @@ def wilson_ci(k, n, z=1.96):
 
 def fig_encoding():
     fig, ax = plt.subplots(figsize=(7, 4))
-    bits   = [264, 64]
-    labels = ["ASCII\n(Baseline)", "Binary\n(Proposed)"]
+    bits   = [264, 112]
+    labels = ["ASCII\n(Baseline)", "Binary\n(112-bit Rescue)"]
     colors = [GOLD, BLUE]
     bars = ax.bar(labels, bits, color=colors, width=0.42,
                   edgecolor="white", linewidth=1.3, zorder=3)
@@ -59,9 +59,9 @@ def fig_encoding():
         ax.text(bar.get_x() + bar.get_width() / 2, val + 4,
                 f"{val} bits", ha="center", va="bottom",
                 fontweight="bold", fontsize=13)
-    ax.annotate("", xy=(1, 72), xytext=(0, 268),
+    ax.annotate("", xy=(1, 120), xytext=(0, 268),
                 arrowprops=dict(arrowstyle="->", color="#555", lw=1.6))
-    ax.text(0.5, 175, "−75.8%", ha="center", color=GREEN,
+    ax.text(0.5, 200, "−57.6%", ha="center", color=GREEN,
             fontweight="bold", fontsize=15)
     ax.axhline(210, color="#e74c3c", linestyle="--", linewidth=2, zorder=4)
     ax.text(1.36, 215, "BDS-SMC limit (210 bits)",
@@ -163,8 +163,8 @@ def fig_delivery():
 
 
 def fig_telemetry():
-    labels = ["ASCII\n(Baseline)", "Huffman\nCoding", "Binary\n(Proposed)"]
-    bits   = [368, 184, 128]
+    labels = ["ASCII\n(Baseline)", "Huffman\nCoding", "Binary\n(112-bit Rescue)"]
+    bits   = [368, 184, 112]
     colors = [GOLD, RED, BLUE]
     fig, ax = plt.subplots(figsize=(7, 4))
     bars = ax.bar(labels, bits, color=colors, width=0.42,
@@ -183,7 +183,7 @@ def fig_telemetry():
             ha="right", color="#e74c3c", fontsize=9, fontweight="bold")
     ax.set_ylabel("Encoded payload size (bits)", fontsize=11)
     ax.set_title("Telemetry Encoding Comparison\n"
-                 "(lat · lon · alt · battery · mode · flags · timestamp)",
+                 "(binary: lat(7dp) · lon(7dp) · alt · uncertainty R · priority · survivor ID)",
                  fontsize=12, fontweight="bold", pad=10)
     ax.set_ylim(0, 445)
     ax.spines[["top", "right"]].set_visible(False)
@@ -334,17 +334,20 @@ GAPS = [
         problem="BDS-SMC 210-bit limit: ASCII coordinate encoding is too large to transmit",
         research_q="Can binary encoding reduce coordinate payload size to fit within the BDS-SMC 210-bit limit?",
         solution=(
-            "Encode latitude and longitude as two signed "
-            "32-bit integers using x10,000 fixed-point scaling. "
-            "Eliminates all ASCII text overhead. "
-            "Payload becomes fixed at 64 bits."
+            "Encode lat/lon as signed 32-bit integers with "
+            "x10,000,000 fixed-point scaling (7 decimal places "
+            "= RTK-grade ~1 cm precision), plus altitude, "
+            "uncertainty radius R, priority and survivor ID. "
+            "Complete rescue payload fixed at 112 bits."
         ),
         result=(
             "ASCII  =  264 bits  ✗ exceeds limit\n"
             "\n"
-            "Binary =   64 bits  ✓ fits limit\n"
+            "Binary =  112 bits  ✓ fits limit\n"
+            "(6 rescue fields, verified on lab\n"
+            " ground-truth records T001-T006)\n"
             "\n"
-            "Reduction = 75.8%"
+            "Reduction = 57.6% with MORE data"
         ),
         significance=(
             "Binary encoding is the only viable format "
@@ -365,9 +368,11 @@ GAPS = [
             "open-sky conditions."
         ),
         result=(
-            "n = 30  (morning baseline)\n"
+            "n = 30  (ASCII baseline, archived)\n"
             "Mean latency = 2.57 s\n"
             "All 30 TX within 5 s BDS-3 limit\n"
+            "3 sessions on 112-bit payload\n"
+            "scheduled (Option B re-collection)\n"
             "\n"
             "UAV positional drift at mean latency:\n"
             "  5 m/s UAV  ->  12.9 m\n"
@@ -400,13 +405,13 @@ GAPS = [
             "approximation is unreliable near 100%."
         ),
         result=(
-            "100% success\n(all 4 environments)\n"
-            "12 locations · 240 TX\n"
+            "232/232 delivered\n(all 4 environments)\n"
+            "12 locations · 232 valid TX\n"
             "\n"
             "x2 = 0.000, df = 3\n"
             "p   = 1.000\n"
             "\n"
-            "Wilson CI:\n[94% - 100%]"
+            "Wilson 95% lower bound:\n>= 93.7% per environment"
         ),
         significance=(
             "x2 = 0.000: success rates are identical "
@@ -431,15 +436,18 @@ GAPS = [
             "benchmark: if even the best text compressor fails, "
             "it conclusively justifies binary packing as a "
             "fundamentally different approach. "
-            "All three are tested on identical telemetry: "
-            "lat, lon, alt, battery, mode, flags, timestamp."
+            "Binary carries the upgraded rescue payload: "
+            "lat(7dp), lon(7dp), alt, uncertainty R, "
+            "priority, survivor ID."
         ),
         result=(
             "ASCII   = 368 bits  ✗\n"
-            "Huffman = 184 bits  ✗\n"
-            "Binary  = 128 bits  ✓\n"
+            "Huffman = 184 bits  ✓ (26 spare)\n"
+            "Binary  = 112 bits  ✓\n"
             "\n"
-            "Binary fits with 82 bits spare"
+            "Binary fits with 98 bits spare\n"
+            "— 39% fewer bits than Huffman\n"
+            "   while carrying MORE fields"
         ),
         significance=(
             "Only binary encoding fits full UAV telemetry "
