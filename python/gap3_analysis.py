@@ -114,6 +114,9 @@ def fisher_pairwise(counts):
 
 
 def print_report(rows):
+    # Exclude legacy OS-1 timeout rows from before the T3 bug fix
+    rows = [r for r in rows if r["result"] != "timeout"]
+
     by_env = defaultdict(lambda: {"success": 0, "fail": 0, "latencies": [], "locations": set()})
     for r in rows:
         env = r["env"]

@@ -16,13 +16,23 @@ HardwareSerial BDSSerial(2); // UART2
 
 // --- PAYLOAD MODE ---
 // 0 = ASCII   (Gap 1 baseline)
-// 1 = BINARY  (Gap 1 binary compression)
+// 1 = BINARY  (112-bit rescue payload — OPERATIONAL DEFAULT)
 // 2 = HUFFMAN (Gap 6 dynamic compression)
-int MODE = 0;
+// Option B (2026-06-12): all Gap 2 sessions (morning/midday/evening) are
+// collected in MODE 1 so the latency ANOVA runs on the operational payload.
+// The old 30-TX ASCII baseline is archived as gap2_latency_ascii_baseline.csv.
+int MODE = 1;
 
-// --- TEST COORDINATE: Yuhang District, Hangzhou, China ---
-float lat =  30.4196;
-float lon = 120.2977;
+// --- TEST COORDINATE: Lab system T001 (ground-truth reference, Table 5) ---
+// double required: 7dp coordinates exceed float's ~7 significant digits.
+// Hardware-test values only — the group sim derives coordinates from the
+// shared Zurich datum (bringup/config/datum.yaml), never from here.
+double   lat         = 49.0068822;
+double   lon         = 8.4383287;
+float    alt_m       = 114.2;  // metres AMSL
+uint16_t r_cm        = 160;    // uncertainty radius R in centimetres (1.6 m)
+uint8_t  priority    = 1;      // 0=P0, 1=P1, 2=P2
+uint8_t  survivor_id = 1;      // T001
 
 unsigned long lastSendTime = 0;
 int sendCount = 0;
@@ -142,28 +152,40 @@ void sendASCII() {
 }
 
 // -------------------------------------------------------------------
-// Gap 1 BINARY
-// Packs lat/lon as two signed 32-bit ints (x10000 fixed point) = 64 bits
+// 112-bit BINARY RESCUE PAYLOAD (Gap 1 / Gap 6 upgrade)
+// Bytes 0-3  lat  (int32, x10,000,000 -> 7dp, ~1cm)
+// Bytes 4-7  lon  (int32, x10,000,000)
+// Bytes 8-9  alt  (int16, metres)
+// Bytes 10-11 R   (uint16, centimetres, 0-655m)
+// Byte  12   priority (0=P0, 1=P1, 2=P2)
+// Byte  13   survivor_id (0-255)
+// Total: 14 bytes = 112 bits
 // -------------------------------------------------------------------
 void sendBinary() {
-  int32_t lat_i = (int32_t)(lat * 10000);
-  int32_t lon_i = (int32_t)(lon * 10000);
-  uint8_t payload[8];
-  payload[0] = (lat_i >> 24) & 0xFF; payload[1] = (lat_i >> 16) & 0xFF;
-  payload[2] = (lat_i >>  8) & 0xFF; payload[3] =  lat_i        & 0xFF;
-  payload[4] = (lon_i >> 24) & 0xFF; payload[5] = (lon_i >> 16) & 0xFF;
-  payload[6] = (lon_i >>  8) & 0xFF; payload[7] =  lon_i        & 0xFF;
+  int32_t lat_i = (int32_t)llround(lat * 10000000.0);
+  int32_t lon_i = (int32_t)llround(lon * 10000000.0);
+  int16_t alt_i = (int16_t)lroundf(alt_m);
 
-  char hex[17];
-  for (int i = 0; i < 8; i++) snprintf(hex + i*2, 3, "%02X", payload[i]);
-  hex[16] = '\0';
+  uint8_t payload[14];
+  payload[0]  = (lat_i >> 24) & 0xFF; payload[1]  = (lat_i >> 16) & 0xFF;
+  payload[2]  = (lat_i >>  8) & 0xFF; payload[3]  =  lat_i        & 0xFF;
+  payload[4]  = (lon_i >> 24) & 0xFF; payload[5]  = (lon_i >> 16) & 0xFF;
+  payload[6]  = (lon_i >>  8) & 0xFF; payload[7]  =  lon_i        & 0xFF;
+  payload[8]  = (alt_i >>  8) & 0xFF; payload[9]  =  alt_i        & 0xFF;
+  payload[10] = (r_cm  >>  8) & 0xFF; payload[11] =  r_cm         & 0xFF;
+  payload[12] = priority;
+  payload[13] = survivor_id;
+
+  char hex[29];
+  for (int i = 0; i < 14; i++) snprintf(hex + i*2, 3, "%02X", payload[i]);
+  hex[28] = '\0';
 
   char buf[64];
   snprintf(buf, sizeof(buf), "$CCTXM,0,BIN:%s", hex);
   String cmd = String(buf) + "*" + calcChecksum(buf) + "\r\n";
   BDSSerial.print(cmd);
   Serial.print("[BINARY TX] "); Serial.print(cmd);
-  Serial.println("[BINARY bits] 64 (two int32) vs ASCII ~152");
+  Serial.println("[BINARY bits] 112 (lat lon alt R priority survivor_id)");
 }
 
 // -------------------------------------------------------------------

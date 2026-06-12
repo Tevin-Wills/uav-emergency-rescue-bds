@@ -7,10 +7,17 @@ Reads data/gap2_latency.csv (all sessions combined) and produces:
   - CDF plot saved to figures/fig_gap2_cdf.png
   - UAV positional error model (max drift at given speed)
 
+Option B (2026-06-12): all three sessions (morning/midday/evening) are collected
+with the 112-bit binary rescue payload. The original 30-TX ASCII-payload baseline
+is archived in data/gap2_latency_ascii_baseline.csv and is NOT part of the
+time-of-day ANOVA (different payload would confound it). Use --ascii-baseline to
+append it as a separate group for a secondary payload-format comparison.
+
 Usage:
     python gap2_analysis.py                   # reads real data
     python gap2_analysis.py --demo            # synthetic multi-session data
     python gap2_analysis.py --plot            # also save CDF figure
+    python gap2_analysis.py --ascii-baseline  # include archived ASCII baseline as extra group
 """
 
 import csv
@@ -189,6 +196,9 @@ def main():
     parser.add_argument("--input", default=DATA_FILE)
     parser.add_argument("--demo",  action="store_true", help="Use synthetic multi-session data")
     parser.add_argument("--plot",  action="store_true", help="Save CDF figure")
+    parser.add_argument("--ascii-baseline", action="store_true",
+                        help="Append archived ASCII-payload baseline as a separate group "
+                             "(payload-format comparison — NOT part of the time-of-day ANOVA claim)")
     args = parser.parse_args()
 
     if args.demo:
@@ -200,6 +210,17 @@ def main():
             print(f"[ERROR] {args.input} not found. Run with --demo to test.")
             return
         rows = load_data(args.input)
+
+    if args.ascii_baseline:
+        archive = os.path.join(os.path.dirname(DATA_FILE), "gap2_latency_ascii_baseline.csv")
+        if os.path.exists(archive):
+            old = load_data(archive)
+            for r in old:
+                r["session"] = "ascii_baseline"
+            rows += old
+            print(f"[INFO] Appended {len(old)} archived ASCII-baseline rows as group 'ascii_baseline'")
+        else:
+            print(f"[WARN] {archive} not found — skipping ASCII baseline")
 
     print(f"\n[GAP 2 ANALYSIS] {len(rows)} transmissions loaded")
     print_stats_table(rows)

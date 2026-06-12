@@ -1,8 +1,11 @@
 """
-Generates BDS-SMC2_Field_Sheet.pdf — printable A4 data collection sheet for Gap 3.
-One sheet covers 1 environment × 1 location × 20 transmissions.
+Generates BDS-SMC2_Field_Sheet.pdf — printable A4 sheets for the FINAL hardware day.
+UPDATED 2026-06-12: Gap 3 is complete (232/232) — sheets now cover what remains:
+  Sheet 1: Morning setup — portal tokens + 112-bit firmware flash checklist
+  Sheet 2: Gap 2 MIDDAY session (30 TX)
+  Sheet 3: 112-bit payload verification + power measurement
+  Sheet 4: Gap 2 EVENING session (30 TX)
 Run: python generate_field_sheet.py
-Output: BDS-SMC2_Field_Sheet.pdf
 """
 
 from reportlab.lib.pagesizes import A4
@@ -26,8 +29,11 @@ SUB    = ParagraphStyle("SUB",    parent=styles["Normal"], fontSize=9,  leading=
                          textColor=colors.HexColor("#4a6fa5"), alignment=TA_CENTER, spaceAfter=2)
 LABEL  = ParagraphStyle("LABEL",  parent=styles["Normal"], fontSize=9,  leading=12,
                          textColor=colors.HexColor("#1a3a5c"), spaceAfter=2)
+BODY   = ParagraphStyle("BODY",   parent=styles["Normal"], fontSize=8.5, leading=12, spaceAfter=2)
 SMALL  = ParagraphStyle("SMALL",  parent=styles["Normal"], fontSize=7.5, leading=10,
                          textColor=colors.grey, spaceAfter=1)
+MONO   = ParagraphStyle("MONO",   parent=styles["Normal"], fontSize=7.5, leading=10,
+                         fontName="Courier", spaceAfter=1)
 META   = ParagraphStyle("META",   parent=styles["Normal"], fontSize=7.5, leading=10,
                          textColor=colors.grey, alignment=TA_CENTER)
 
@@ -52,14 +58,9 @@ def header_box(data, col_widths):
     ]))
     return t
 
-def tx_table():
-    header = ["TX #", "Time\n(HH:MM:SS)", "Result\n(✓/✗/T)", "Latency\n(sec)", "LED\n(G/–)", "Notes / Errors"]
-    rows = [header]
-    for i in range(1, 21):
-        rows.append([str(i), "", "", "", "", ""])
-    t = Table(rows, colWidths=[1.1*cm, 2.8*cm, 2.2*cm, 2.4*cm, 1.8*cm, 7.4*cm])
+def grid_table(rows, col_widths, header_bg="#2e5fa3", row_pad=10):
     style = [
-        ("BACKGROUND",    (0, 0), (-1, 0),  colors.HexColor("#2e5fa3")),
+        ("BACKGROUND",    (0, 0), (-1, 0),  colors.HexColor(header_bg)),
         ("TEXTCOLOR",     (0, 0), (-1, 0),  colors.white),
         ("FONTNAME",      (0, 0), (-1, 0),  "Helvetica-Bold"),
         ("FONTSIZE",      (0, 0), (-1, 0),  8),
@@ -68,103 +69,23 @@ def tx_table():
         ("ROWBACKGROUNDS",(0, 1), (-1,-1),  [colors.HexColor("#f7f9fc"), colors.white]),
         ("GRID",          (0, 0), (-1,-1),  0.5, colors.HexColor("#c0ccd8")),
         ("VALIGN",        (0, 0), (-1,-1),  "MIDDLE"),
-        ("ALIGN",         (0, 0), (4, -1),  "CENTER"),
         ("TOPPADDING",    (0, 0), (-1,-1),  5),
-        ("BOTTOMPADDING", (0, 0), (-1,-1),  10),
+        ("BOTTOMPADDING", (0, 0), (-1,-1),  row_pad),
         ("LEFTPADDING",   (0, 0), (-1,-1),  4),
     ]
-    # shade every 5 rows slightly darker for readability
-    for row in [5, 10, 15, 20]:
-        style.append(("BACKGROUND", (0, row), (-1, row), colors.HexColor("#dce6f0")))
+    t = Table(rows, colWidths=col_widths)
     t.setStyle(TableStyle(style))
     return t
 
-def summary_table():
-    rows = [
-        ["Metric", "Value"],
-        ["Total TX", "20"],
-        ["Successes (✓)", ""],
-        ["Failures (✗)", ""],
-        ["Timeouts (T)", ""],
-        ["Success rate (%)", ""],
-        ["Mean latency (sec)", ""],
-        ["Min / Max latency", "  /  "],
-    ]
-    t = Table(rows, colWidths=[5.5*cm, 5.5*cm])
-    t.setStyle(TableStyle([
-        ("BACKGROUND",   (0, 0), (-1, 0), colors.HexColor("#1a3a5c")),
-        ("TEXTCOLOR",    (0, 0), (-1, 0), colors.white),
-        ("FONTNAME",     (0, 0), (-1, 0), "Helvetica-Bold"),
-        ("FONTSIZE",     (0, 0), (-1,-1), 8),
-        ("FONTNAME",     (0, 1), (-1,-1), "Helvetica"),
-        ("BACKGROUND",   (0, 1), (-1,-1), colors.HexColor("#eef2f7")),
-        ("GRID",         (0, 0), (-1,-1), 0.5, colors.HexColor("#c0ccd8")),
-        ("VALIGN",       (0, 0), (-1,-1), "MIDDLE"),
-        ("TOPPADDING",   (0, 0), (-1,-1), 5),
-        ("BOTTOMPADDING",(0, 0), (-1,-1), 12),
-        ("LEFTPADDING",  (0, 0), (-1,-1), 6),
-    ]))
-    return t
-
-def make_page(env_label, story):
+def page_header(story, title_line):
     story += [
-        Paragraph("BDS-SMC2 Field Data Collection Sheet", TITLE),
-        Paragraph("Gap 3 — Environmental Signal Reception  ·  4 Environments × 3 Locations × 20 TX", SUB),
+        Paragraph("BDS-SMC2 Final Hardware Day — Field Sheet", TITLE),
+        Paragraph(title_line, SUB),
         rule(1.5, "#1a3a5c"),
         Spacer(1, 0.2*cm),
     ]
 
-    # Session info block
-    info = [
-        ["Environment", "Location ID", "Date", "Experimenter"],
-        [env_label, "", "", "Letsoalo Maile"],
-    ]
-    story.append(header_box(info, [4.5*cm, 3.0*cm, 4.5*cm, 5.7*cm]))
-    story.append(Spacer(1, 0.2*cm))
-
-    coords = [
-        ["GPS Lat", "GPS Lon", "Weather", "Cloud % (0-100)", "Antenna Direction", "Sky Obstruction %"],
-        ["", "", "", "", "North", ""],
-    ]
-    story.append(header_box(coords, [2.8*cm, 2.8*cm, 2.8*cm, 3.0*cm, 3.3*cm, 3.0*cm]))
-    story.append(Spacer(1, 0.2*cm))
-
-    story.append(Paragraph("Firmware Mode: 0 (ASCII)   ·   BDS portal: http://bdrd.hwasmart.com/   ·   Login: RCSSTEAP_3058_SM_1 / 123456", SMALL))
-    story.append(Paragraph("Result codes: ✓ = Send Success (green LED)   ✗ = Failed/Error   T = 30s Timeout", SMALL))
-    story.append(Spacer(1, 0.15*cm))
-
-    # TX log table
-    story.append(tx_table())
-    story.append(Spacer(1, 0.3*cm))
-
-    # Summary + notes side-by-side
-    notes_data = [
-        [summary_table(),
-         Table([
-             [Paragraph("<b>Field Notes / Observations</b>", LABEL)],
-             [""],
-             [""],
-             [""],
-             [""],
-             [""],
-         ], colWidths=[8.9*cm],
-         style=TableStyle([
-             ("BACKGROUND", (0,0), (-1,0), colors.HexColor("#1a3a5c")),
-             ("TEXTCOLOR",  (0,0), (-1,0), colors.white),
-             ("FONTNAME",   (0,0), (-1,0), "Helvetica-Bold"),
-             ("FONTSIZE",   (0,0), (-1,-1), 8),
-             ("FONTNAME",   (0,1), (-1,-1), "Helvetica"),
-             ("BACKGROUND", (0,1), (-1,-1), colors.HexColor("#eef2f7")),
-             ("GRID",       (0,0), (-1,-1), 0.5, colors.HexColor("#c0ccd8")),
-             ("TOPPADDING", (0,0), (-1,-1), 5),
-             ("BOTTOMPADDING",(0,0),(-1,-1), 18),
-             ("LEFTPADDING", (0,0),(-1,-1), 6),
-         ]))
-        ]
-    ]
-    notes_tbl = Table(notes_data, colWidths=[8.9*cm, 8.9*cm])
-    notes_tbl.setStyle(TableStyle([("VALIGN", (0,0), (-1,-1), "TOP")]))
-    story.append(notes_tbl)
+def footer(story):
     story.append(Spacer(1, 0.2*cm))
     story.append(rule())
     story.append(Paragraph(
@@ -172,32 +93,108 @@ def make_page(env_label, story):
         "Dissertation Research — Letsoalo Maile, 2026",
         META))
 
-environments = [
-    "Open Sky (OS)",
-    "Light Canopy (LC)",
-    "Urban Canyon (UC)",
-    "Indoor (IN)",
-]
-
-# Each environment gets 3 location pages (3 locations × 20 TX)
-location_labels = ["Location 1", "Location 2", "Location 3"]
-
 story = []
-page_count = 0
-for env in environments:
-    for loc in location_labels:
-        if page_count > 0:
-            story.append(PageBreak())
-        env_label = f"{env} — {loc}"
-        make_page(env_label, story)
-        page_count += 1
+
+# ── SHEET 1: Morning setup checklist ────────────────────────────────────────────
+page_header(story, "Sheet 1 — Morning Setup: Portal Activation + 112-bit Firmware")
+
+story.append(header_box([["Date", "Start time", "Location (same as Gap 2 baseline)", "Experimenter"],
+                         ["", "", "", "Letsoalo Maile"]],
+                        [3.5*cm, 3.0*cm, 6.5*cm, 4.7*cm]))
+story.append(Spacer(1, 0.25*cm))
+
+story.append(grid_table([
+    ["[ ]", Paragraph("<b>A. Portal reader activation (at home, before leaving)</b>", BODY), "Done time"],
+    ["[ ]", Paragraph("Log in at http://bdrd.hwasmart.com (RCSSTEAP_3058_SM_1 / 123456)", BODY), ""],
+    ["[ ]", Paragraph("F12 &rarr; Application &rarr; Local Storage &rarr; copy <b>data</b>, <b>access_token</b>, <b>refresh_token</b>", BODY), ""],
+    ["[ ]", Paragraph("Paste into python/portal_config.json", BODY), ""],
+    ["[ ]", Paragraph("Run: python python/portal_reader.py --dump  (record real message field names below)", BODY), ""],
+    ["[ ]", Paragraph("Start dashboard: python python/tx_dashboard.py &rarr; http://localhost:8765", BODY), ""],
+], [0.9*cm, 13.3*cm, 2.5*cm], header_bg="#1a3a5c"))
+story.append(Spacer(1, 0.2*cm))
+story.append(Paragraph("Portal message field names seen in --dump output:", LABEL))
+story.append(grid_table([["Field name", "Example value", "Maps to"]] + [["", "", ""]]*4,
+                        [5*cm, 7*cm, 4.7*cm]))
+story.append(Spacer(1, 0.25*cm))
+
+story.append(grid_table([
+    ["[ ]", Paragraph("<b>B. Firmware flash (112-bit payload)</b> — disconnect GPIO16/17 first, DIO mode, 40 MHz, hold BOOT + press RESET at 'Connecting...'", BODY), "Done"],
+    ["[ ]", Paragraph("Flash esp32_sender.ino (MODE=1 binary; test coord = lab T001)", BODY), ""],
+    ["[ ]", Paragraph("Reconnect GPIO16/17; power on; wait 2 minutes before first TX", BODY), ""],
+    ["[ ]", Paragraph("Verify serial shows: [BINARY TX] $CCTXM,0,BIN:1D35DB5605079637007200A00101*..", BODY), ""],
+], [0.9*cm, 13.3*cm, 2.5*cm], header_bg="#1a3a5c"))
+footer(story)
+story.append(PageBreak())
+
+# ── SHEET 2: Gap 2 midday session ───────────────────────────────────────────────
+def gap2_sheet(session_name, when_line, extras=None):
+    page_header(story, f"Sheet — Gap 2 {session_name} Session · 30 TX · MODE 1 (112-bit binary) · {when_line}")
+    story.append(header_box([["Session", "Start (HH:MM)", "Weather", "Cloud %", "Temp (opt.)"],
+                             [session_name.lower(), "", "", "", ""]],
+                            [3.2*cm, 3.2*cm, 4.2*cm, 3.0*cm, 4.1*cm]))
+    story.append(Spacer(1, 0.15*cm))
+    story.append(Paragraph(
+        f"Command:  .\\run_gap2_{session_name.lower()}.bat   (auto-stops at 30 TX). "
+        "Power on ESP32 &rarr; wait 2 min &rarr; run bat &rarr; power off immediately after.", SMALL))
+    story.append(Paragraph(
+        "Option B: ALL sessions transmit the 112-bit binary payload (one flash, no mode "
+        "switching). Logger fills gap2_latency.csv automatically — use this sheet only for anomalies.", SMALL))
+    story.append(Spacer(1, 0.15*cm))
+    rows = [["TX block", "All OK? (Y/N)", "Anomalies (TX#, what happened)"]]
+    for blk in ["1–5", "6–10", "11–15", "16–20", "21–25", "26–30"]:
+        rows.append([blk, "", ""])
+    story.append(grid_table(rows, [2.5*cm, 2.8*cm, 11.4*cm], row_pad=16))
+    story.append(Spacer(1, 0.25*cm))
+    story.append(grid_table([
+        ["Metric", "Value"],
+        ["Successes / 30", ""],
+        ["Timeouts", ""],
+        ["Mean latency from logger (ms)", ""],
+        ["Dashboard 'ground confirmed' count", ""],
+    ], [8*cm, 8.7*cm], header_bg="#1a3a5c", row_pad=12))
+    if extras:
+        story.append(Spacer(1, 0.25*cm))
+        for e in extras:
+            story.append(e)
+    footer(story)
+
+# ── SHEET 2: Morning session — doubles as 112-bit hardware acceptance ──────────
+morning_extras = [
+    Paragraph("<b>112-bit acceptance check (first TX of this session IS the hardware verification):</b>", LABEL),
+    grid_table([
+        ["Check", "Result"],
+        ["TX #1: module accepted 28-char hex (no $CCTXM error)?   [ ] yes  [ ] no", ""],
+        ["TX #1: [T3] Send Success + green LED?                    [ ] yes  [ ] no", ""],
+        ["TX #1 visible on portal (screenshot taken)?              [ ] yes  [ ] no", ""],
+        ["CRITICAL — portal shows: [ ] packed binary (112 bits on-air)  [ ] ASCII hex text (224 bits)", ""],
+        ["IF MODULE REJECTS: stop session — fallback firmware (R as uint8, 104 bits) needed first", ""],
+    ], [13.2*cm, 3.5*cm], header_bg="#c0392b", row_pad=10),
+]
+gap2_sheet("Morning", "run 08:00–10:00", extras=morning_extras)
+story.append(PageBreak())
+
+# ── SHEET 3: Midday session + power measurement ────────────────────────────────
+midday_extras = [
+    Paragraph("Optional — power measurement (USB meter in supply line, during this session):", LABEL),
+    grid_table([
+        ["State", "Voltage (V)", "Current (mA)", "Duration (s)", "Notes"],
+        ["Idle (module on, no TX)", "", "", "", ""],
+        ["During TX burst", "", "", "", ""],
+        ["Peak observed", "", "", "", ""],
+    ], [5*cm, 2.6*cm, 2.8*cm, 2.6*cm, 3.7*cm], row_pad=12),
+]
+gap2_sheet("Midday", "run 12:00–14:00 — SAME DAY", extras=midday_extras)
+story.append(PageBreak())
+
+# ── SHEET 4: Evening session ────────────────────────────────────────────────────
+gap2_sheet("Evening", "run AFTER 18:00 — SAME DAY")
 
 doc = SimpleDocTemplate(
     OUTPUT,
     pagesize=A4,
     leftMargin=1.8*cm, rightMargin=1.8*cm,
     topMargin=1.5*cm,  bottomMargin=1.5*cm,
-    title="BDS-SMC2 Field Data Collection Sheet",
+    title="BDS-SMC2 Final Hardware Day Field Sheet",
     author="Letsoalo Maile",
 )
 
@@ -205,11 +202,9 @@ def on_page(canvas, doc):
     canvas.saveState()
     canvas.setFont("Helvetica", 7)
     canvas.setFillColor(colors.grey)
-    env_idx = (doc.page - 1) // 3 + 1
-    loc_idx = (doc.page - 1) % 3 + 1
-    canvas.drawString(1.8*cm, 0.8*cm, f"Sheet {doc.page}/12  ·  Environment {env_idx}/4  ·  Location {loc_idx}/3")
-    canvas.drawRightString(W - 1.8*cm, 0.8*cm, "BDS-SMC2 Gap 3 Field Data Sheet")
+    canvas.drawString(1.8*cm, 0.8*cm, f"Sheet {doc.page}/4  ·  Final hardware day")
+    canvas.drawRightString(W - 1.8*cm, 0.8*cm, "BDS-SMC2 Field Sheet (Rev. 2 — post Gap 3)")
     canvas.restoreState()
 
 doc.build(story, onFirstPage=on_page, onLaterPages=on_page)
-print(f"[DONE] Field data sheet saved: {OUTPUT}  ({page_count} pages — 4 envs × 3 locations)")
+print(f"[DONE] Field sheet saved: {OUTPUT}  (4 sheets — setup, midday, 112-bit verify, evening)")
