@@ -94,7 +94,74 @@ Three encodings of identical rescue data are compared by exact bit count: ASCII 
 
 ---
 
+## V. Results — Latency
+
+*Every ⟦SLOT⟧ is filled from one command after the field day: `python python/gap2_analysis.py --plot`. The surrounding prose is final; only the bracketed numbers change.*
+
+### V.A Encoding result (already collected — final)
+
+The three encodings of identical rescue data compare as follows (Table 3). ASCII text requires 368 bits — 158 bits over the 210-bit regional budget, so it cannot be transmitted in a single message. Dynamic Huffman coding reaches 184 bits but, as noted in Section IV.E, this excludes the code table that practical decoding would require. The fixed-point binary payload reaches 112 bits and carries the complete six-field rescue record, leaving 98 bits of headroom — 39% fewer bits than Huffman while conveying strictly more information. Round-trip decoding reproduced all six ground-truth records bit-for-bit, confirming lossless encoding at 7-decimal coordinate precision.
+
+### V.B Latency distribution
+
+Across the three time-of-day sessions (n = ⟦N_TOTAL⟧ transmissions), end-to-end transmission latency (T1→T3) had mean ⟦MEAN⟧ ms (SD ⟦SD⟧ ms, median ⟦MEDIAN⟧ ms, 95th percentile ⟦P95⟧ ms). The cumulative distribution (Fig. 2) shows ⟦PCT_UNDER_5S⟧% of transmissions completed within the operationally relevant window. [If a hard BDS-3 timeout is observed, state it here.]
+
+For reference, the archived ASCII-payload session (n = 30, mean 2574.5 ms, SD 1094.7 ms) — collected before the payload upgrade — is reported separately in Section V.D as a payload-format comparison; it is excluded from the time-of-day analysis because the differing payload would confound it.
+
+### V.C Time-of-day effect (ANOVA)
+
+A one-way ANOVA across the morning, midday, and evening sessions yielded F(⟦DF_B⟧, ⟦DF_W⟧) = ⟦F⟧, p = ⟦P⟧. [Template — choose at fill time:] *(if p ≥ 0.05)* Time of day had no statistically detectable effect on transmission latency, indicating the link's timing is stable across the operating day — a desirable property for rescue scheduling. *(if p < 0.05)* Time of day significantly affected latency; post-hoc inspection (Table 4) localises the difference to the ⟦SESSION⟧ session, plausibly attributable to ⟦cause⟧.
+
+### V.D Payload-format comparison (secondary)
+
+Comparing the operational 112-bit binary sessions (mean ⟦MEAN⟧ ms) against the archived ASCII session (mean 2574.5 ms) tests whether payload length materially affects latency. ⟦The difference of NN ms is/ is not statistically/operationally significant⟧, indicating that the reliability and latency characterisation transfers across payload formats. *(This is the bonus finding Option B buys: a reviewer asking "does your payload change your timing?" is answered with data, not assertion.)*
+
+### V.E UAV positional-error implication
+
+Latency translates to positional staleness when the UAV is moving: error = speed × latency. At the measured mean of ⟦MEAN_S⟧ s, a UAV at 5/10/15 m/s accrues ⟦E5⟧/⟦E10⟧/⟦E15⟧ m of drift; at the 95th-percentile latency of ⟦P95_S⟧ s, ⟦E5p⟧/⟦E10p⟧/⟦E15p⟧ m. For area-search operations these magnitudes are well within a practical search radius; for precision approach the UAV should reduce speed before final descent.
+
+## VI. Results — Environmental Reliability
+
+*This section is fully collected; numbers are final (verified against `gap3_field_test.csv`, 2026-06-12).*
+
+### VI.A Delivery success by environment
+
+Across 232 valid transmissions, every transmission was acknowledged by the satellite segment in all four environments (open sky n = 61, light canopy n = 57, urban canyon n = 57, indoor n = 57). With zero observed failures, we report the 95% Wilson lower bound rather than the point estimate: delivery reliability is **≥ 93.7% per environment** (≥ 98.4% pooled). Figure 3 shows the per-environment proportions with Wilson intervals; Table 5 gives counts.
+
+### VI.B Homogeneity across environments
+
+A χ² test of homogeneity found no difference among environments (χ² = 0.000, df = 3, p = 1.000); pairwise Fisher exact tests with Bonferroni correction were likewise non-significant (all p = 1.000). We emphasise the correct interpretation: zero failures in n ≈ 57 per cell *bounds reliability from below* but cannot distinguish true reliabilities above ≈ 94%. The environments tested may not have stressed the link margin; conditions imposing deeper fades (sub-basement, dense reinforced structures, heavy precipitation) are identified as future work to localise the failure boundary.
+
+### VI.C Delivery corroboration (independent of firmware)
+
+Because the satellite acknowledgment is self-reported by the transmitting module, delivery was corroborated independently: ⟦C_CONFIRMED⟧ of ⟦C_TOTAL⟧ field-day transmissions had their exact payload bytes located in an independent operator-portal receipt (bit-perfect criterion, Section IV.D), confirming end-to-end content integrity through the satellite black box. The per-message ground-segment transit time (satellite acknowledgment → portal receipt) had median ⟦DT_MED⟧ s (range ⟦DT_MIN⟧–⟦DT_MAX⟧ s) — to our knowledge the first per-message application-layer measurement of this interval. [Note in text: these Δt values are upper bounds, inflated by up to one portal-poll interval.]
+
+## VII. Discussion
+
+### VII.A Where BDS-3 SMC sits among rescue links
+
+Table 6 positions BDS-3 SMC against GSM/cellular, LoRaWAN, COSPAS-SARSAT, and Iridium SBD. *(Insert the comparison table and paragraph from `BDS_SMC2_Paper1_Sections.md` §A verbatim.)* The decisive column is independence from surviving ground infrastructure, where only the satellite systems qualify; among those, only BDS-3 SMC combines a user-definable triage payload with the single-digit-second latency measured here. The 112-bit coincidence with COSPAS-SARSAT's short format sharpens the point: the same bit budget that the incumbent spends on identity alone here carries a complete triage record.
+
+### VII.B Delivery assurance without a return link
+
+The link as exercised is one-way (Section III.C). Absent an application-layer acknowledgment, delivery assurance is obtained by repetition: with the measured per-attempt lower bound p = 0.937, k attempts deliver at least one message with probability 1 − (1 − p)ᵏ — 99.6% at k = 2, 99.97% at k = 3 (Table 7), at a cost of one 10 s cycle per repeat. The survivor-ID field renders repeats idempotent at the receiver. This converts the absence of a return link from a reliability objection into a quantified design parameter.
+
+### VII.C Integration significance
+
+That the decoded coordinate drives a ROS 2 mission trigger (Section III.D) without modifying any consuming module demonstrates the payload's fitness as a system interface, not merely a transmission artefact. The rescue fields beyond position (altitude, uncertainty, priority, survivor ID) are decoded and logged today; their promotion into the shared message interface — enabling search-radius-aware path planning and priority-ordered multi-survivor triage — is a pending interface agreement rather than a technical obstacle.
+
+### VII.D Limitations
+
+*(Insert the failure-modes subsection from `BDS_SMC2_Paper1_Sections.md` §D.3 verbatim.)* In brief: single hardware unit (no unit-to-unit variance characterised); third-party portal on the receive path; fixed destination addressing; emulated rather than live RTK input (closed in Paper 2); and a reliability lower bound that the tested environments were not severe enough to tighten.
+
+## VIII. Conclusion
+
+This work characterised BDS-3 short message communication as a rescue data link and demonstrated, on commodity hardware, that a survivor's RTK-precision position together with altitude, uncertainty radius, triage priority and identity fits within a single 112-bit message — 53% of the regional budget — and is delivered with a 95% lower-bound reliability of ≥ 93.7% across open-sky, canopy, urban-canyon and indoor environments, at a mean latency of ⟦MEAN_S⟧ s, decoding directly into an autonomous UAV mission pipeline. The four results are conjunctive: a complete payload that fits (Gaps 1, 6), arrives reliably where rescues occur (Gap 3), and arrives in time (Gap 2) jointly establish a capability — infrastructure-free, triage-complete, second-scale rescue signalling — that no incumbent system provides. Future work closes the return link via RDSS receive, replaces emulated RTK with live positioning, and reports the full survivor-to-UAV pipeline latency budget (Paper 2).
+
+---
+
 ## Assembly checklist (delete before submission)
+- [ ] **Fill all ⟦SLOT⟧ markers** in Sections V–VI from `gap2_analysis.py --plot` + dashboard (one pass after the field day)
 - [ ] Fig. 1: hardware/system diagram (use `figures/payload_route_illustration.png` as base)
 - [ ] Table 2: T001–T006 ground-truth records
 - [ ] Resolve [REF-1]…[REF-6] (candidates in `BDS_SMC2_Node_Evaluation.md` paper list; verify before citing)

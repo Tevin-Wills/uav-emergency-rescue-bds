@@ -229,6 +229,43 @@ def main():
         fig_path = os.path.join(FIG_DIR, "fig_gap2_cdf.png")
         save_cdf(rows, fig_path)
 
+    print_paper_slots(rows)
+
+
+def print_paper_slots(rows):
+    """Emit the exact values for the ⟦SLOT⟧ markers in BDS_SMC2_Paper1_Draft.md §V."""
+    op = [r for r in rows if r["session"] in ("morning", "midday", "evening")]
+    if not op:
+        print("\n[PAPER SLOTS] No operational-payload sessions yet — run the field day first.")
+        return
+    lat = [r["latency"] for r in op]
+    st = descriptive_stats(lat)
+    by = defaultdict(list)
+    for r in op:
+        by[r["session"]].append(r["latency"])
+    groups = [v for v in by.values() if len(v) > 1]
+    F = P = float("nan")
+    if len(groups) >= 2:
+        F, P = anova_f(groups)
+    under5 = 100 * sum(1 for v in lat if v <= 5000) / len(lat)
+    mean_s, p95_s = st["mean"] / 1000, st["p95"] / 1000
+    err = lambda s, t: round(s * t, 1)
+    print("\n" + "=" * 60)
+    print("[PAPER SLOTS] paste these into BDS_SMC2_Paper1_Draft.md  Sec V")
+    print("=" * 60)
+    print(f"  N_TOTAL      = {st['n']}")
+    print(f"  MEAN         = {st['mean']:.0f}   (MEAN_S = {mean_s:.2f} s)")
+    print(f"  SD           = {st['std']:.0f}")
+    print(f"  MEDIAN       = {st['median']:.0f}")
+    print(f"  P95          = {st['p95']:.0f}   (P95_S = {p95_s:.2f} s)")
+    print(f"  PCT_UNDER_5S = {under5:.1f}")
+    print(f"  DF_B, DF_W   = {len(groups)-1}, {len(lat)-len(groups)}")
+    print(f"  F            = {F:.3f}" + ("" if not math.isnan(F) else "  (need >=2 sessions)"))
+    print(f"  P            = {P:.4f}" if not math.isnan(P) else "  P = (install scipy)")
+    print(f"  E5/E10/E15   = {err(5,mean_s)} / {err(10,mean_s)} / {err(15,mean_s)} m  (at mean)")
+    print(f"  E5p/E10p/E15p= {err(5,p95_s)} / {err(10,p95_s)} / {err(15,p95_s)} m  (at P95)")
+    print("=" * 60)
+
 
 if __name__ == "__main__":
     main()
