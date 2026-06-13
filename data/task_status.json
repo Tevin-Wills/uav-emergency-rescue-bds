@@ -6,9 +6,9 @@
   "min": "2 min"
  },
  {
-  "col": "now",
+  "col": "done",
   "t": "Portal tokens -> portal_reader.py --dump",
-  "d": "bdrd.hwasmart.com login, F12 > Local Storage > data/access_token/refresh_token into portal_config.json",
+  "d": "WORKS - reader pulled 4 portal msgs into portal_inbox.csv. Endpoint=getHistoryMsg, offset 1-based, fields card_id/encode_type/msg_data/created_at",
   "min": "5 min"
  },
  {
@@ -66,36 +66,6 @@
   "min": "with group"
  },
  {
-  "col": "hardware",
-  "t": "Flash MODE 1 + morning session (30 TX)",
-  "d": "TX #1 = 112-bit acceptance + on-air bit check; run_gap2_morning.bat",
-  "min": "08-10h"
- },
- {
-  "col": "hardware",
-  "t": "Midday session (30 TX) + power",
-  "d": "run_gap2_midday.bat; USB meter optional",
-  "min": "12-14h"
- },
- {
-  "col": "hardware",
-  "t": "Evening session (30 TX)",
-  "d": "run_gap2_evening.bat \u2014 same day",
-  "min": "18h+"
- },
- {
-  "col": "hardware",
-  "t": "Run ANOVA + regenerate figures",
-  "d": "gap2_analysis.py --plot; Paper 1 evidence complete",
-  "min": "evening"
- },
- {
-  "col": "hardware",
-  "t": "Dashboard evidence screenshots",
-  "d": "CONFIRMED bit-perfect rows + black-box dt (fixes audit risk #3)",
-  "min": "during"
- },
- {
   "col": "done",
   "t": "112-bit rescue payload (firmware + decoders)",
   "d": "Round-trip bit-perfect on lab T001-T006"
@@ -134,5 +104,95 @@
   "col": "done",
   "t": "Both branches pushed to GitHub",
   "d": "node/bds-smc2 (workspace) + node/binary-decode (PR)"
+ },
+ {
+  "col": "done",
+  "t": "H1. Night before: log in at bdrd.hwasmart.com (RCSSTEAP_3058_SM_1 / 123456)",
+  "d": "WORKS - reader pulled 4 portal msgs into portal_inbox.csv. Endpoint=getHistoryMsg, offset 1-based, fields card_id/encode_type/msg_data/created_at",
+  "min": "home"
+ },
+ {
+  "col": "done",
+  "t": "H2. Night before: F12 > Application > Local Storage > bdrdserver > copy data, access_token, refresh_token",
+  "d": "WORKS - reader pulled 4 portal msgs into portal_inbox.csv. Endpoint=getHistoryMsg, offset 1-based, fields card_id/encode_type/msg_data/created_at",
+  "min": "home"
+ },
+ {
+  "col": "done",
+  "t": "H3. Night before: paste the 3 values into python/portal_config.json and save",
+  "d": "WORKS - reader pulled 4 portal msgs into portal_inbox.csv. Endpoint=getHistoryMsg, offset 1-based, fields card_id/encode_type/msg_data/created_at",
+  "min": "home"
+ },
+ {
+  "col": "done",
+  "t": "H4. Night before: test python python\\portal_reader.py --dump",
+  "d": "WORKS - reader pulled 4 portal msgs into portal_inbox.csv. Endpoint=getHistoryMsg, offset 1-based, fields card_id/encode_type/msg_data/created_at",
+  "min": "home"
+ },
+ {
+  "col": "hardware",
+  "t": "H5. Before leaving: flash firmware (MODE 1 already set) via Arduino IDE",
+  "d": "check: Done uploading",
+  "min": "home"
+ },
+ {
+  "col": "hardware",
+  "t": "H6. Field: open 3 terminals (logger / portal_reader --poll 10 / tx_dashboard) + browser localhost:8765",
+  "d": "check: dashboard loads",
+  "min": "field"
+ },
+ {
+  "col": "hardware",
+  "t": "H7. Field: power node, antenna to sky, WAIT 2 minutes",
+  "d": "check: module warmed up",
+  "min": "field"
+ },
+ {
+  "col": "hardware",
+  "t": "H8. Field MORNING: Terminal 1 Enter (serial_logger --session morning --n 30)",
+  "d": "check: TX every 10s x30",
+  "min": "08-10h"
+ },
+ {
+  "col": "hardware",
+  "t": "H9. Field: WATCH first TX dot 2 light = 112-bit ACCEPTED (go/no-go; if not -> stop, msg Claude)",
+  "d": "check: dot 2 green",
+  "min": "08-10h"
+ },
+ {
+  "col": "hardware",
+  "t": "H10. Field: confirm rows turn green CONFIRMED + screenshot one",
+  "d": "check: green row saved",
+  "min": "08-10h"
+ },
+ {
+  "col": "hardware",
+  "t": "H11. Field: open one msg on portal, tick binary-vs-ASCII box on Field Sheet 3",
+  "d": "check: box ticked",
+  "min": "08-10h"
+ },
+ {
+  "col": "hardware",
+  "t": "H12. Field MIDDAY: change --session midday, repeat H7-H10 (+ power meter optional)",
+  "d": "check: 30 TX midday",
+  "min": "12-14h"
+ },
+ {
+  "col": "hardware",
+  "t": "H13. Field EVENING: change --session evening, repeat H7-H10",
+  "d": "check: 30 TX evening",
+  "min": "18h+"
+ },
+ {
+  "col": "hardware",
+  "t": "H14. Evening: python python\\gap2_analysis.py --plot -> copy [PAPER SLOTS] block",
+  "d": "check: stats + slot numbers",
+  "min": "evening"
+ },
+ {
+  "col": "hardware",
+  "t": "H15. Fill the slot numbers into BDS_SMC2_Paper1_Draft.md Section V",
+  "d": "check: blanks filled = Paper 1 data complete",
+  "min": "evening"
  }
 ]

@@ -116,9 +116,10 @@ def load_rx():
                 row = json.loads(r["row_json"])
             except (KeyError, ValueError):
                 row = {}
-            # message text field name varies by portal — try common keys
+            # portal record content field is msg_data (confirmed 2026-06-13);
+            # keep fallbacks for safety
             text = next((str(row[k]) for k in
-                         ("content", "message", "msg", "raw", "text", "data")
+                         ("msg_data", "content", "message", "msg", "raw", "text", "data")
                          if k in row and row[k]), json.dumps(row, ensure_ascii=False)[:120])
             try:
                 ts = datetime.strptime(r["received_at_local"], "%Y-%m-%d %H:%M:%S")

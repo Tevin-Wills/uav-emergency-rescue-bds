@@ -5,6 +5,9 @@ firmware/esp32_sender/build/
 # Portal credentials and reader state (never commit tokens)
 python/portal_config.json
 data/portal_seen.json
+data/portal_inbox.csv
+data/tokens_raw.txt
+data/live_state.json
 
 # Python cache
 __pycache__/

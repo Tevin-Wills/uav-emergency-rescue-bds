@@ -116,14 +116,22 @@ class Portal:
         self._save_config()
         print("[AUTH] Tokens refreshed.")
 
-    def fetch_messages(self, endpoint="getRecord", offset=0, limit=50):
-        """Fetch one page of messages; auto-refreshes tokens once on auth failure."""
+    def fetch_messages(self, endpoint="getHistoryMsg", offset=1, limit=50):
+        """Fetch one page of messages; auto-refreshes tokens once on auth failure.
+
+        NOTE (verified live 2026-06-13): the portal's received-message list is
+        /bdShortMessage/getHistoryMsg and its offset is 1-BASED (offset=0 returns
+        HTTP 200 with body {"code":500}). getRecord returns card binding history,
+        not messages. Record fields: card_id, encode_type (bool), msg_data, created_at."""
+        # searchOptions/sortOptions shapes confirmed from the portal's own
+        # localStorage (historyMsgActive, 2026-06-13): the record fields are
+        # card_id, encode_type, msg_data, created_at.
         body = {
             "uid": self.cfg["uid"],
             "offset": offset,
             "limit": limit,
-            "searchOptions": {},
-            "sortOptions": {},
+            "searchOptions": {"card_id": "", "encode_type": "", "msg_data": "", "created_at": ""},
+            "sortOptions": {"card_id": False, "created_at": False},
         }
         for attempt in (1, 2):
             try:
@@ -150,10 +158,13 @@ def extract_rows(resp):
 
 
 def row_key(row):
-    """Stable identity for de-duplication. Prefer a real id; fall back to content hash."""
+    """Stable identity for de-duplication. Prefer a real id; fall back to
+    (card_id, created_at, msg_data) which the portal records expose; else hash."""
     for k in ("id", "_id", "msg_id", "msgId"):
         if k in row:
             return str(row[k])
+    if "created_at" in row or "msg_data" in row:
+        return f"{row.get('card_id','')}|{row.get('created_at','')}|{row.get('msg_data','')}"
     return str(hash(json.dumps(row, sort_keys=True, ensure_ascii=False)))
 
 
@@ -203,7 +214,7 @@ def main():
     ap.add_argument("--once", action="store_true", help="poll once and exit")
     ap.add_argument("--poll", type=float, metavar="SEC", help="poll continuously every SEC seconds")
     ap.add_argument("--dump", action="store_true", help="print one full raw API response and exit")
-    ap.add_argument("--endpoint", default="getRecord", choices=["getRecord", "getHistoryMsg"])
+    ap.add_argument("--endpoint", default="getHistoryMsg", choices=["getHistoryMsg", "getRecord"])
     args = ap.parse_args()
 
     portal = Portal()
