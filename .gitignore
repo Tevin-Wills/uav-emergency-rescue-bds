@@ -2,6 +2,10 @@
 firmware/esp32_sender/build/
 *.bin
 
+# Internal team strategy brief — local only, not for the shared group repo
+BDS-SMC2_Team_Publication_Brief.pdf
+generate_team_brief.py
+
 # Portal credentials and reader state (never commit tokens)
 python/portal_config.json
 data/portal_seen.json
