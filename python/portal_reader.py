@@ -101,31 +101,45 @@ class Portal:
     def _auth_headers(self):
         return {"uid": self.cfg["uid"], "authorization": self.cfg["access_token"]}
 
-    def refresh_tokens(self):
-        """Exchange refresh_token for a new token pair (mirrors the SPA's flow)."""
-        body = {"code": self.cfg["refresh_token"], "type": self.cfg["uid"]}
-        resp = api_post("/authentication/getToken", body)
-        if resp.get("code") != 200:
-            sys.exit(
-                f"[AUTH] Token refresh failed ({resp}). Re-do the browser login and "
-                f"update {self.config_path}."
+    _EXPIRED_MSG = (
+        "[AUTH] Tokens expired — re-copy from the browser.\n"
+        "  1. On the portal page, press F12 -> Console\n"
+        "  2. Run:  copy(JSON.stringify(localStorage))\n"
+        "  3. Paste the 'data', 'access_token', 'refresh_token' values into\n"
+        "     {path}\n"
+        "  (The portal rotates its uid; this reader auto-refreshes the uid via\n"
+        "   /authentication/verify, but once the access_token itself expires a\n"
+        "   fresh copy is required.)"
+    )
+
+    def verify_and_refresh_uid(self):
+        """The portal's uid rotates. /authentication/verify (with the current
+        access_token + uid) returns a fresh uid — the same step the browser SPA
+        performs. Returns True and updates the stored uid on success."""
+        try:
+            resp = api_post(
+                "/authentication/verify",
+                {"access_token": self.cfg["access_token"], "data": self.cfg["uid"]},
+                headers=self._auth_headers(),
             )
-        self.cfg["uid"] = resp.get("data", self.cfg["uid"])
-        self.cfg["access_token"] = resp["access_token"]
-        self.cfg["refresh_token"] = resp.get("refresh_token", self.cfg["refresh_token"])
-        self._save_config()
-        print("[AUTH] Tokens refreshed.")
+        except Exception:
+            return False
+        if resp.get("code") == 200 and resp.get("data"):
+            self.cfg["uid"] = resp["data"]
+            self._save_config()
+            return True
+        return False
 
     def fetch_messages(self, endpoint="getHistoryMsg", offset=1, limit=50):
-        """Fetch one page of messages; auto-refreshes tokens once on auth failure.
+        """Fetch one page of messages.
 
         NOTE (verified live 2026-06-13): the portal's received-message list is
         /bdShortMessage/getHistoryMsg and its offset is 1-BASED (offset=0 returns
         HTTP 200 with body {"code":500}). getRecord returns card binding history,
-        not messages. Record fields: card_id, encode_type (bool), msg_data, created_at."""
-        # searchOptions/sortOptions shapes confirmed from the portal's own
-        # localStorage (historyMsgActive, 2026-06-13): the record fields are
-        # card_id, encode_type, msg_data, created_at.
+        not messages. Record fields: card_id, encode_type (bool), msg_data, created_at.
+        The uid rotates, so we refresh it via verify before each fetch."""
+        if not self.verify_and_refresh_uid():
+            sys.exit(self._EXPIRED_MSG.format(path=self.config_path))
         body = {
             "uid": self.cfg["uid"],
             "offset": offset,
@@ -139,13 +153,15 @@ class Portal:
                                 headers=self._auth_headers())
             except urllib.error.HTTPError as e:
                 if e.code in (401, 403) and attempt == 1:
-                    self.refresh_tokens()
-                    continue
+                    if self.verify_and_refresh_uid():
+                        body["uid"] = self.cfg["uid"]
+                        continue
+                    sys.exit(self._EXPIRED_MSG.format(path=self.config_path))
                 raise
             if resp.get("code") == 200:
                 return resp
-            if attempt == 1:  # expired token often comes back as a non-200 body code
-                self.refresh_tokens()
+            if attempt == 1 and self.verify_and_refresh_uid():
+                body["uid"] = self.cfg["uid"]
                 continue
             raise RuntimeError(f"Portal returned error: {resp}")
 

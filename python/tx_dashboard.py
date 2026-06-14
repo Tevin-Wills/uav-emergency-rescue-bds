@@ -375,7 +375,14 @@ def main():
     ap.add_argument("--sim", action="store_true",
                     help="presentation mode: animates a simulated TX cycle (T001-T006), "
                          "no hardware or data files needed")
+    ap.add_argument("--mock-portal", action="store_true",
+                    help="read RX from data/portal_inbox_mock.csv (the file auto_sender "
+                         "--mock writes) instead of the real portal_inbox.csv")
     args = ap.parse_args()
+    if args.mock_portal:
+        global RX_CSV
+        RX_CSV = os.path.join(HERE, "..", "data", "portal_inbox_mock.csv")
+        print("[DASHBOARD] reading mock portal RX: portal_inbox_mock.csv")
     SIM, SIM_T0 = args.sim, time.time()
     mode = "SIMULATION (presentation)" if SIM else "live data"
     print(f"[DASHBOARD] http://localhost:{args.port}  ({mode}; Ctrl+C to stop)")

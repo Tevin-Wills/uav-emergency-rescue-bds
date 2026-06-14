@@ -6,8 +6,10 @@ firmware/esp32_sender/build/
 python/portal_config.json
 data/portal_seen.json
 data/portal_inbox.csv
+data/portal_inbox_mock.csv
 data/tokens_raw.txt
 data/live_state.json
+data/outgoing_coords.csv
 
 # Python cache
 __pycache__/
