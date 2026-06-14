@@ -71,7 +71,10 @@ s.append(tbl([
 # Recommendation box
 rb=Table([[P("<b>Recommended strategy:</b> NOT five separate papers. Target <b>1–2 strong solo papers</b> "
              "(Obj 5, and Obj 1) <b>+ ONE joint flagship system paper</b> where every member is an author. "
-             "Quality over a forced paper each. A few publishable papers beat many unpublishable ones.<br/>"
+             "Quality over a forced paper each. A few publishable papers beat many unpublishable ones.<br/><br/>"
+             "<b>Authorship — explicit:</b> each member KEEPS their own first-authored paper on their objective "
+             "and their own data. The joint flagship paper is <b>ADDITIONAL</b> (every member a co-author), "
+             "<b>not a replacement</b> for anyone's solo work. No one folds their contribution into another's paper.<br/><br/>"
              "<b>Realistic Q1:</b> Obj 5 (Paper 1) and the joint system paper if we manage one real flight. "
              "The rest are credible Q2/Q3 or strengthen the joint paper.",BODY)]],colWidths=[18*cm])
 rb.setStyle(TableStyle([("BACKGROUND",(0,0),(-1,-1),colors.HexColor("#eafaf1")),
