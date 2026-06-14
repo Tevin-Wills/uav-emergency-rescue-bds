@@ -89,6 +89,7 @@ def load_tx():
             hex_sent = ""
             if "BIN:" in payload:
                 hex_sent = payload.split("BIN:")[1].split("*")[0].strip().upper()
+            note = r.get("note", "") or ""
             out.append({
                 "tx_num": r.get("tx_num", "?"),
                 "session": r.get("session", ""),
@@ -101,6 +102,8 @@ def load_tx():
                 "payload": payload,
                 "hex": hex_sent,
                 "sent": try_decode(payload) or (payload[:60] if payload else ""),
+                "note": note,
+                "flag": "NEEDS ATTENTION" in note.upper(),
             })
     return out
 
@@ -271,6 +274,8 @@ def build_state():
             "timeouts": n - ok,
             "ground_confirmed": sum(1 for t in tx if t.get("confirmed")),
             "bit_perfect": sum(1 for t in tx if t.get("integrity")),
+            "needs_attention": sum(1 for t in tx if t.get("flag")),
+            "recycled": sum(1 for t in tx if "lap" in (t.get("note") or "").lower()),
             "mean_latency_ms": round(sum(lats) / len(lats)) if lats else None,
             "portal_rows": len(rx),
         },
@@ -294,6 +299,8 @@ td{padding:6px 10px;border-bottom:1px solid #1d2531}
 .pill{padding:2px 9px;border-radius:10px;font-size:11px;font-weight:600}
 .ok{background:#11391f;color:#4ade80}.bad{background:#3a1418;color:#f87171}
 .mid{background:#332b10;color:#fbbf24}.gray{background:#242c37;color:#8d99a8}
+.flag{background:#4a1010;color:#ff4d4d;animation:flash 1s infinite}
+@keyframes flash{0%,100%{opacity:1}50%{opacity:0.45}}
 .stages span{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px}
 .on{background:#4ade80}.off{background:#37404d}
 .next{background:#fbbf24;animation:pulse 0.9s infinite}
@@ -316,10 +323,9 @@ async function load(){
   const d = await (await fetch('/api/data')).json();
   document.getElementById('gen').textContent = 'updated ' + d.generated;
   const s = d.summary;
-  const cards = [['Total TX',s.total_tx],['Sat ACK',s.sat_ack],['Timeouts',s.timeouts],
-    ['Ground confirmed',s.ground_confirmed],['Bit-perfect',s.bit_perfect],
-    ['Mean latency',s.mean_latency_ms? s.mean_latency_ms+' ms':'—'],
-    ['Portal rows',s.portal_rows]];
+  const cards = [['Total TX',s.total_tx],['Confirmed',s.ground_confirmed],['Bit-perfect',s.bit_perfect],
+    ['Needs attn',s.needs_attention||0],['Recycled',s.recycled||0],['Timeouts',s.timeouts],
+    ['Mean latency',s.mean_latency_ms? s.mean_latency_ms+' ms':'—'],['Portal rows',s.portal_rows]];
   document.getElementById('cards').innerHTML = cards.map(c=>
     '<div class="card"><div class="v">'+c[1]+'</div><div class="k">'+c[0]+'</div></div>').join('');
   let liveRow = '';
@@ -333,10 +339,12 @@ async function load(){
       '<td class="mono">'+(L.sent? 'loaded: '+L.sent : 'payload loading…')+'</td></tr>';
   }
   document.getElementById('txb').innerHTML = liveRow + d.tx.map(t=>{
-    const st = t.t3 ? (t.integrity?'<span class="pill ok">CONFIRMED ✓</span>'
+    const st = t.flag ? '<span class="pill flag">NEEDS ATTENTION ⚠</span>'
+             : t.t3 ? (t.integrity?'<span class="pill ok">CONFIRMED ✓</span>'
                       :(t.confirmed?'<span class="pill ok">CONFIRMED</span>':'<span class="pill mid">SAT ACK</span>'))
                     : '<span class="pill bad">TIMEOUT</span>';
-    const right = t.rx_text || (t.sent? '<span style="color:#5a6675">sent: '+t.sent+'</span>' : '—');
+    let right = t.rx_text || (t.sent? '<span style="color:#5a6675">sent: '+t.sent+'</span>' : '—');
+    if (t.note && !t.integrity) right += ' <span style="color:#8d99a8">· '+t.note+'</span>';
     const bbox = (t.portal_dt_s!==null && t.portal_dt_s!==undefined)? '&le; '+t.portal_dt_s+' s' : '—';
     return '<tr><td>'+t.tx_num+'</td><td>'+t.session+'</td><td class="mono">'+t.time.replace('T',' ').slice(0,19)+
       '</td><td class="stages">'+dot(true)+dot(t.t2)+dot(t.t3)+dot(t.confirmed)+'</td><td>'+st+
