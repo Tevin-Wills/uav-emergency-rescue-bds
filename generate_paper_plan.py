@@ -294,6 +294,33 @@ story.append(note("Verdict: publishable as a simulation-validated end-to-end sys
                   "IF the integration data is collected, authorship is settled, and novelty is framed as above. "
                   "Sequence: Paper 1 submitted FIRST; do not start Paper 2 writing until then."))
 
+story += [sp(8), h2("3.3  Five Levers to Lift Paper 2 to Q1 (from YOUR side, no group dependency)")]
+story.append(simple_table([
+    [Paragraph("<b>Lever</b>", S_NOTE), Paragraph("<b>Action</b>", S_NOTE), Paragraph("<b>When</b>", S_NOTE)],
+    [Paragraph("<b>1. Reframe</b>", S_BODY),
+     body("Title/subject = YOUR GCS + operations layer, UAV is the consumer. "
+          "'A self-healing, delivery-assured ground-control and operations layer for satellite "
+          "rescue messaging, integrated with an autonomous UAV pipeline.'"), body("now (writing)")],
+    [Paragraph("<b>2. Real, not sim</b>", S_BODY),
+     body("State plainly: BDS TX + satellite + portal + GCS + operations layer are validated on REAL "
+          "hardware over the live BDS-3 link; only the UAV response is simulated. Strongest underused argument."),
+     body("now (framing)")],
+    [Paragraph("<b>3. Rigour</b>", S_BODY),
+     body("(a) end-to-end latency budget = per-stage distribution + CIs + bottleneck; "
+          "(b) black-box satellite transit dt distribution (n>=100, unreported elsewhere); "
+          "(c) self-healing layer validated vs 1-(1-p)^k delivery-assurance model."), body("integration session + analysis")],
+    [Paragraph("<b>4. Artifact</b>", S_BODY),
+     body("Package the open stdlib GCS+operations toolchain (portal reader, decoder, dashboard, "
+          "auto-sender+retry) as a reusable release. Reproducibility = Q1 differentiator; most BDS-SMC papers ship nothing."),
+     body("now (packaging)")],
+    [Paragraph("<b>5. One real flight</b>", S_BODY),
+     body("Champion ONE real drone flight to one real BDS-transmitted coordinate. Converts the paper from "
+          "'simulation-validated' to 'demonstrated system'. You provide the coordinate; make it the headline ask."),
+     body("group integration")],
+], col_widths=[3.2*cm, 11.3*cm, 2.5*cm]))
+story.append(note("Ceiling: Levers 1-4 alone -> solid Q1/Q2 (Drones/Sensors/IEEE Access). Add Lever 5 (real flight) "
+                  "-> genuine Q1. Items 1, 4 are pure writing/packaging doable NOW before any integration session."))
+
 # ── Section 4: Timeline ─────────────────────────────────────────────────────────
 story.append(h1("4.  Combined Timeline (Rev. 3)", NAVY))
 story += [sp(6)]
@@ -316,6 +343,38 @@ story.append(simple_table([
     [body("Sep-Nov 2026"),      body("Settle authorship; write Paper 2; (stretch) one real flight"),
      body("Paper 2 draft -> submit (IEEE Access / Drones)")],
 ], col_widths=[3.2*cm, 8.3*cm, 5.5*cm]))
+
+# ── Section 5: Project-wide publication strategy ────────────────────────────────
+story.append(h1("5.  Project-Wide Strategy — How Many Papers from Obj 1-5", NAVY))
+story += [sp(6),
+    body("Honest count: ~5-6 papers possible across the team, but most objectives are APPLICATIONS of "
+         "established methods (RTKLIB, PX4/QGC, vision detection, RRT*). Q1 rejects 'we applied known "
+         "method X' — the publishable angle is the disaster-rescue gap the standard method does NOT cover. "
+         "Realistic Q1 candidates: Obj 5 (yours) and Obj 1; the rest are Q2/Q3 or contributors to a joint paper."),
+    sp(6),
+]
+story.append(simple_table([
+    [Paragraph("<b>Obj</b>", S_NOTE), Paragraph("<b>Publishable argument (NOT the base method)</b>", S_NOTE),
+     Paragraph("<b>Realistic</b>", S_NOTE)],
+    [body("1 RTK"), body("RTK reliability under compound-disaster GNSS degradation + viability-gating for safe landing "
+                         "(their Level-3 total-failure scenarios ARE the novelty)"), body("Q1/Q2")],
+    [body("2 QGC"), body("Autonomous precision-landing decision framework gated on real-time RTK viability"), body("Q2/Q3 or joint")],
+    [body("3 Detect"), body("Detection-to-geolocation pipeline, OR a disaster-survivor dataset, OR detection under rubble/occlusion"), body("Q2/Q3")],
+    [body("4 Path"), body("Uncertainty-aware planning to a survivor REGION defined by the rescue search-radius R "
+                          "(uses Obj 5's R field)"), body("Q2/Q3")],
+    [body("5 BDS"), body("Field-measured BDS-SMC rescue link + complete 112-bit payload (Paper 1); end-to-end GCS system (Paper 2)"), body("Q1 / Q1-Q2")],
+], col_widths=[1.8*cm, 12.2*cm, 3*cm]))
+
+story += [sp(8), h2("5.1  Cross-Objective Papers (often stronger than the parts)")]
+story.append(simple_table([
+    [Paragraph("<b>Combination</b>", S_NOTE), Paragraph("<b>Why it is novel</b>", S_NOTE)],
+    [body("Obj1 RTK viability -> Obj2 landing"), body("Position-confidence-gated autonomous landing (closed safety loop)")],
+    [body("Obj5 uncertainty R -> Obj4 planning"), body("Uncertainty-aware planning to a survivor region, not a point")],
+    [body("Obj3 detect -> Obj5 coord -> Obj4 path"), body("Detection-confirmed rescue retargeting")],
+], col_widths=[5.5*cm, 11.5*cm]))
+story.append(note("Smartest strategy: NOT 5 separate papers — rather 1-2 strong solo papers (yours, Obj 1) + ONE "
+                  "joint flagship system paper giving everyone authorship. Quality over a forced paper each "
+                  "(echoes the supervisor's '100 unpublishable papers = 0')."))
 
 story += [sp(8), hr()]
 story.append(Paragraph(
