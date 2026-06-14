@@ -86,9 +86,9 @@ story = []
 story += [
     sp(20),
     Paragraph("BDS-SMC2 UAV Rescue System", S_TITLE),
-    Paragraph("Publication Plan — Two Papers (Rev. 2)", S_SUB),
+    Paragraph("Publication Plan — Two Papers (Rev. 3)", S_SUB),
     Paragraph("Letsoalo Maile  |  GNSS &amp; Satellite Communication Dissertation", S_DATE),
-    Paragraph("Updated 12 June 2026 — post-audit numbers, 112-bit rescue payload, ROS 2 integration", S_DATE),
+    Paragraph("Updated 14 June 2026 — figures finalised, Q1 readiness, Paper 2 publishability + experiment plan", S_DATE),
     sp(8), hr(), sp(6),
 ]
 
@@ -101,9 +101,10 @@ story += [sp(6),
          "end-to-end system paper (RTK injection, GCS decode, ROS 2, UAV mission pipeline), "
          "matching the group integration now in place."),
     sp(4),
-    warn("Positioning note: the BDS-3 GSMC system paper (Geodesy &amp; Geodynamics, 2021; "
-         "2149 TX, 97.72%) already field-measured the link. Our claim is therefore the "
-         "NARROWED one below — never claim 'first field measurement of BDS-3 SMC'."),
+    warn("Positioning note: the BDS-3 GSMC system paper (Li et al., Advances in Space "
+         "Research 67(5):1701-1708, 2021; 2149 TX, 97.72%) already field-measured the link. "
+         "Our claim is therefore the NARROWED one below — never claim 'first field "
+         "measurement of BDS-3 SMC'."),
     sp(6),
 ]
 
@@ -204,6 +205,32 @@ story.append(simple_table([
      body("Target Aug 2026"), body("venue portal")],
 ], col_widths=[0.7*cm, 8.8*cm, 3.5*cm, 4*cm]))
 
+# ── Paper 1 figures + Q1 readiness ──────────────────────────────────────────────
+story += [sp(8), h2("2.5  Figures (6 — the canonical set)")]
+story.append(simple_table([
+    [Paragraph("<b>Fig</b>", S_NOTE), Paragraph("<b>File</b>", S_NOTE),
+     Paragraph("<b>Section</b>", S_NOTE), Paragraph("<b>Shows</b>", S_NOTE)],
+    [body("1"), body("payload_route_illustration.png"), body("III"), body("End-to-end signal path + instrumentation")],
+    [body("2"), body("gap1_encoding_comparison.png"),   body("V"),   body("ASCII 264 vs binary 112 bits (-57.6%)")],
+    [body("3"), body("gap6_telemetry_comparison.png"),  body("V"),   body("368 / 184 / 112 bits + 210-bit limit")],
+    [body("4"), body("gap3_success_rate.png"),          body("VI"),  body("Delivery by environment + Wilson CIs")],
+    [body("5"), body("gap3_location_breakdown.png"),    body("VI"),  body("12 locations, 232 TX")],
+    [body("6"), body("fig_gap2_cdf.png"),               body("V"),   body("Latency CDF (regenerate after field day)")],
+], col_widths=[1*cm, 6.5*cm, 1.8*cm, 7.7*cm]))
+story.append(note("Ignore old/duplicate figures (fig2_*, fig3_*, _pres*, fig_*summary, fig_research_overview) — not the Paper 1 set."))
+
+story += [sp(8), h2("2.6  Q1 Readiness")]
+story.append(simple_table([
+    [Paragraph("<b>Criterion</b>", S_NOTE), Paragraph("<b>Standing</b>", S_NOTE), Paragraph("<b>Gap to close</b>", S_NOTE)],
+    [body("Novelty"),         body("STRONG — first environment-stratified field measurement; binary beats Huffman"), body("Position vs Li et al. [R1]")],
+    [body("Rigor"),           body("STRONG — Wilson CIs, ANOVA, chi-sq, published raw data + exclusion log"), body("Finish Gap 2 ANOVA (field day)")],
+    [body("Significance"),    body("GOOD — infrastructure-free, triage-complete rescue signalling"), body("Comparison table sells it")],
+    [body("Reproducibility"), body("EXCELLENT — open stdlib toolchain, raw CSVs published"), body("Add data-availability statement")],
+    [body("Positioning"),     body("NEEDS WORK"), body("Related-work + cite R1-R6 (writing, not experiment)")],
+    [body("Presentation"),    body("IN PROGRESS"), body("Clean figures (done) + tight writing")],
+], col_widths=[3*cm, 9*cm, 5*cm]))
+story.append(note("Realistic target: MDPI Drones (Q1/Q2, publishes this genre). IEEE TAES is true Q1 but the single-unit + emulated-RTK gaps would trigger major revisions. Blockers to Q1: (1) do the field day for real latency; (2) single hardware unit — disclose; (3) emulated RTK — defensible via Objective 5, closed in Paper 2."))
+
 # ── Section 3: Paper 2 ──────────────────────────────────────────────────────────
 story.append(h1("3.  Paper 2 — End-to-End Rescue Pipeline  (system paper)", GREEN))
 story += [sp(6)]
@@ -223,51 +250,76 @@ story.append(simple_table([
                                  "(alt / uncertainty / priority / survivor_id) pending group approval.")],
 ], col_widths=[3.5*cm, 13.5*cm]))
 
-story += [sp(8), h2("3.1  Data To Collect (after Paper 1)")]
+story += [sp(8), h2("3.1  Experiments To Collect (after Paper 1)")]
 story.append(simple_table([
-    [Paragraph("<b>Dataset</b>", S_NOTE),
-     Paragraph("<b>Minimum sample</b>", S_NOTE),
-     Paragraph("<b>Purpose</b>", S_NOTE)],
-    [body("RTK &rarr; BDS TX accuracy chain"), body("30 TX per coordinate set"),
-     body("Coordinate accuracy loss through transmission chain")],
-    [body("GCS decode latency"),               body("30+ samples"),
-     body("Portal-poll + decode stage of the latency budget")],
-    [body("Multi-survivor scenario"),          body("3 runs x 6 TX (T001-T006 messages ready)"),
-     body("Survivor-ID field + multi-victim triage validation")],
-    [body("ROS 2 publish rate"),               body("50+ samples"),
-     body("Real-time capability of the integration layer")],
-    [body("Mission-trigger latency"),          body("20+ samples"),
-     body("Topic publish &rarr; mission reaction (uXRCE-DDS path)")],
-    [body("UAV positional error model"),       body("Derived from Gap 2 data"),
-     body("No new hardware — modelled from latency distribution")],
-], col_widths=[5*cm, 5.5*cm, 6.5*cm]))
+    [Paragraph("<b>Experiment</b>", S_NOTE),
+     Paragraph("<b>Min</b>", S_NOTE),
+     Paragraph("<b>Proves</b>", S_NOTE),
+     Paragraph("<b>Who/where</b>", S_NOTE)],
+    [Paragraph("<b>RTK&rarr;BDS accuracy chain</b>", S_BODY), body("30/set"),
+     body("Chain preserves RTK precision (~1cm = quantization)"), body("YOU — node+GCS")],
+    [Paragraph("<b>GCS decode latency</b>", S_BODY), body("30+"),
+     body("Portal&rarr;decode stage timing"), body("YOU — node+GCS")],
+    [Paragraph("<b>End-to-end latency budget *</b>", S_BODY), body("30+ runs"),
+     body("Per-stage RTK&rarr;trigger timing — THE novel core"), body("GROUP stack")],
+    [Paragraph("<b>Multi-survivor triage *</b>", S_BODY), body("3x6 TX"),
+     body("Survivor-ID + priority &rarr; P0-first rescue"), body("GROUP stack")],
+    [body("ROS 2 publish rate"), body("50+"),
+     body("Real-time capable"), body("GROUP stack")],
+    [body("Mission-trigger latency"), body("20+"),
+     body("Topic publish &rarr; UAV reacts"), body("GROUP stack")],
+    [body("UAV positional-error model"), body("derived"),
+     body("Drift = speed x latency (no new hardware)"), body("YOU — analysis")],
+], col_widths=[4.5*cm, 1.8*cm, 7*cm, 3.7*cm]))
+story.append(note("* = must-have (the paper's core). All GROUP-stack rows are gated on ONE integrated session "
+                  "(Gazebo + ROS + your node running together). YOU-rows can be pre-collected alone before that session."))
+
+story += [sp(8), h2("3.2  Publishability — confronted honestly")]
+story.append(simple_table([
+    [Paragraph("<b>Hard truth</b>", S_NOTE), Paragraph("<b>Consequence / mitigation</b>", S_NOTE)],
+    [Paragraph("<b>It is a simulation / proof-of-concept paper</b>", S_BODY),
+     body("UAV = Gazebo, RTK = emulated; only the satellite link is real. Publishable in Drones/Sensors/"
+          "IEEE Access as 'simulation-validated architecture' — NOT a top field-robotics venue. Frame honestly.")],
+    [Paragraph("<b>Authorship boundary</b>", S_BODY),
+     body("Objectives 1-4 are group mates' work. Either a multi-author group paper (cleanest), or YOUR paper "
+          "claiming only BDS+GCS+integration with their modules cited. Decide BEFORE writing.")],
+    [Paragraph("<b>Must not read as 'Paper 1 + glue'</b>", S_BODY),
+     body("Novel core MUST be the end-to-end latency budget + multi-survivor triage + operations layer "
+          "(retry/recycle/self-heal), NOT 'we connected modules'.")],
+    [Paragraph("<b>Upgrade: one real flight</b>", S_BODY),
+     body("A single real UAV flying to one real BDS-transmitted coordinate converts it from simulation to "
+          "demonstrated system and unlocks better venues. Highest value-per-effort addition.")],
+], col_widths=[5*cm, 12*cm]))
+story.append(note("Verdict: publishable as a simulation-validated end-to-end system paper (Q1/Q2 applied venue) "
+                  "IF the integration data is collected, authorship is settled, and novelty is framed as above. "
+                  "Sequence: Paper 1 submitted FIRST; do not start Paper 2 writing until then."))
 
 # ── Section 4: Timeline ─────────────────────────────────────────────────────────
-story.append(h1("4.  Combined Timeline (Rev. 2)", NAVY))
+story.append(h1("4.  Combined Timeline (Rev. 3)", NAVY))
 story += [sp(6)]
 story.append(simple_table([
     [Paragraph("<b>Period</b>", S_NOTE),
      Paragraph("<b>Activity</b>", S_NOTE),
      Paragraph("<b>Output</b>", S_NOTE)],
-    [body("Now (June W2)"),     body("Fill citations; group meeting on .msg extension; push node to team repo"),
-     body("Drafted sections citation-complete")],
-    [body("Field day"),         body("Gap 2 midday + evening; 112-bit TX; portal tokens; dashboard evidence"),
+    [body("Now"),               body("Draft Related Work + positioning; verify R5/R6; open PR; .msg meeting"),
+     body("Paper 1 positioning done")],
+    [body("Field day"),         body("Gap 2 morning+midday+evening (112-bit, Option B); 112-bit acceptance; dashboard evidence"),
      body("Paper 1 empirical record COMPLETE")],
-    [body("June W3-W4"),        body("ANOVA, figures, assemble Paper 1 full draft"),
+    [body("After field day"),   body("gap2_analysis.py -> fill slots; regenerate Fig 6; assemble full draft"),
      body("Submission-ready draft to supervisor")],
-    [body("July"),              body("Revise per supervisor; Ubuntu integration demo with group"),
-     body("Paper 1 final; integration video/screenshots for Paper 2")],
-    [body("August 2026"),       body("Submit Paper 1 (MDPI Drones)"),
+    [body("Then"),              body("Revise per supervisor; Ubuntu integration session with group"),
+     body("Paper 1 final; Paper 2 integration data starts")],
+    [body("Target Aug 2026"),   body("Submit Paper 1 (MDPI Drones)"),
      body("Under review")],
-    [body("Sep-Oct 2026"),      body("Collect Paper 2 datasets; write system paper"),
-     body("Paper 2 draft")],
-    [body("Nov 2026"),          body("Submit Paper 2 (IEEE Access / Drones)"),
-     body("Under review")],
+    [body("Integration session"), body("Run full Obj1-5 stack together; collect latency budget + multi-survivor"),
+     body("Paper 2 must-have data")],
+    [body("Sep-Nov 2026"),      body("Settle authorship; write Paper 2; (stretch) one real flight"),
+     body("Paper 2 draft -> submit (IEEE Access / Drones)")],
 ], col_widths=[3.2*cm, 8.3*cm, 5.5*cm]))
 
 story += [sp(8), hr()]
 story.append(Paragraph(
-    "BDS-SMC2 Publication Plan Rev. 2  |  Letsoalo Maile  |  12 June 2026  |  "
+    "BDS-SMC2 Publication Plan Rev. 3  |  Letsoalo Maile  |  14 June 2026  |  "
     "numbers audited against raw datasets",
     S_FOOT
 ))
