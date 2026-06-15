@@ -36,6 +36,10 @@ figures/
 
 # Personal publication drafts — local only, not for the shared group repo
 BDS_SMC2_Paper2_Draft.md
+BDS_SMC2_Paper1_Draft.md
+BDS_SMC2_Paper1_Sections.md
+BDS-SMC2_Paper_Plan.pdf
+generate_paper_plan.py
 
 # Local hardware rig photos (personal)
 _photos/
