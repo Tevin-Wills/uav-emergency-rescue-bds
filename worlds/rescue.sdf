@@ -90,6 +90,31 @@
       <name>survivor_4</name>
       <pose>70 45 0 0 0 0.8</pose>
     </include>
+
+<include>
+  <uri>model://person_standing</uri>
+  <name>survivor_5</name>
+  <pose>15 60 0 0 0 0</pose>
+</include>
+
+<include>
+  <uri>model://person_standing</uri>
+  <name>survivor_6</name>
+  <pose>-50 20 0 0 0 0</pose>
+</include>
+
+<include>
+  <uri>model://person_walking</uri>
+  <name>survivor_7</name>
+  <pose>90 -15 0 0 0 1.0</pose>
+</include>
+
+<include>
+  <uri>model://person_standing</uri>
+  <name>survivor_8</name>
+  <pose>-70 -30 0 0 0 0.5</pose>
+</include>
+
     <include>
       <uri>model://oak_tree</uri>
       <name>tree_1</name>
