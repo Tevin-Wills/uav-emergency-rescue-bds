@@ -23,6 +23,7 @@ import json
 import time
 import argparse
 import os
+import sys
 from datetime import datetime
 
 DATA_DIR  = os.path.join(os.path.dirname(__file__), "..", "data")
@@ -230,10 +231,18 @@ def run_demo(out=OUT_FILE):
 
 
 def main():
+    # ESP32 debug output can interleave non-ASCII noise; don't let the Windows
+    # cp1252 console crash on it (UnicodeEncodeError seen 2026-06-15).
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
     parser = argparse.ArgumentParser(description="Gap 2 BDS-SMC session logger")
     parser.add_argument("--port",      default="COM3",
                         help="Serial port (e.g. COM3)")
-    parser.add_argument("--baud",      type=int, default=9600)
+    # Firmware debug Serial runs at 115200; this reads that line, not the module.
+    parser.add_argument("--baud",      type=int, default=115200)
     parser.add_argument("--session",   default="morning",
                         choices=["morning", "midday", "evening"],
                         help="Time-of-day session label for ANOVA")
