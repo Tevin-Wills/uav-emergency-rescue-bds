@@ -15,6 +15,11 @@ data/tokens_raw.txt
 data/live_state.json
 data/outgoing_coords.csv
 
+# Virtual-BeiDou-link generated outputs (reproducible via sim/run_sim.py / run_all.py)
+data/sim_latency.csv
+data/portal_inbox_sim.csv
+gcs/output/
+
 # Python cache
 __pycache__/
 *.pyc

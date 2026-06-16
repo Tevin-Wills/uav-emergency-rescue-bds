@@ -386,9 +386,16 @@ def main():
     ap.add_argument("--mock-portal", action="store_true",
                     help="read RX from data/portal_inbox_mock.csv (the file auto_sender "
                          "--mock writes) instead of the real portal_inbox.csv")
+    ap.add_argument("--sim-data", action="store_true",
+                    help="read the virtual-BeiDou-link output (sim/run_sim.py / run_all.py): "
+                         "TX from data/sim_latency.csv, RX from data/portal_inbox_sim.csv")
     args = ap.parse_args()
+    global RX_CSV, TX_CSV
+    if args.sim_data:
+        TX_CSV = os.path.join(HERE, "..", "data", "sim_latency.csv")
+        RX_CSV = os.path.join(HERE, "..", "data", "portal_inbox_sim.csv")
+        print("[DASHBOARD] sim-data mode: TX=sim_latency.csv  RX=portal_inbox_sim.csv")
     if args.mock_portal:
-        global RX_CSV
         RX_CSV = os.path.join(HERE, "..", "data", "portal_inbox_mock.csv")
         print("[DASHBOARD] reading mock portal RX: portal_inbox_mock.csv")
     SIM, SIM_T0 = args.sim, time.time()
