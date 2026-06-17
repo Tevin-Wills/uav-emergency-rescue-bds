@@ -29,9 +29,11 @@ Install QGroundControl on Windows, not inside WSL2. Download the Windows install
 
 When PX4 SITL is running, QGroundControl connects automatically:
 
-1. Start PX4 SITL: `make px4_sitl gz_x500`
+1. Start PX4 SITL — this project uses `scripts/launch_sim_24.sh`, which runs **PX4 instance 1**.
 2. Start QGroundControl.
-3. QGC detects PX4 on UDP port `18570` and connects automatically.
+3. QGC detects PX4 over UDP and connects automatically.
+
+> **Port note:** PX4 maps the GCS UDP port by instance — instance 0 (bare `make px4_sitl gz_x500`) uses **18570**, while **instance 1** (this project's `launch_sim_24.sh`, `-i 1`) uses **18571**. Point QGC at **18571** for the project's standard setup.
 
 No manual configuration is required for the default SITL setup.
 

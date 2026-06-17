@@ -82,6 +82,16 @@ See [`qgroundcontrol_setup.md`](qgroundcontrol_setup.md) for details.
 
 ---
 
+## Key SITL Parameters
+
+| Parameter | Value | Purpose |
+|-----------|-------|---------|
+| `EKF2_GPS_CTRL` | 7 | Enable GPS fusion |
+| `EKF2_HGT_REF` | 1 | Use GPS for height reference |
+| `COM_RC_IN_MODE` | 1 | Joystick disabled (offboard / GCS only) |
+
+---
+
 ## Notes
 
 - PX4 build artifacts are gitignored. Do not commit the `PX4-Autopilot/` folder.

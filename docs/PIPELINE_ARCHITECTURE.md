@@ -29,6 +29,35 @@ LAYER 2: AUTOPILOT            PX4 SITL (x500_1) ◄────────┘
 LAYER 1: SIMULATION          Gazebo Harmonic — dynamics + GPS + (camera/depth)
 ```
 
+### Ground-side / UAV-side view
+
+A complementary lens on the same system, split by where each subsystem conceptually sits:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        Ground Side                          │
+│  ┌──────────────┐    ┌──────────────┐   ┌───────────────┐  │
+│  │  QGroundCtrl │    │  BeiDou SMS  │   │  RTK Base Stn │  │
+│  │ (qgc_control)│    │  (beidou_    │   │  (rtk_pos.)   │  │
+│  │              │    │  short_msg)  │   └──────┬────────┘  │
+│  └──────┬───────┘    └──────┬───────┘          │           │
+└─────────┼───────────────────┼──────────────────┼───────────┘
+          │ MAVLink/UDP        │ Coordinates       │ RTCM corrections
+┌─────────┼───────────────────┼──────────────────┼───────────┐
+│         │              UAV Side                │           │
+│  ┌──────▼───────┐    ┌──────▼───────┐   ┌──────▼────────┐  │
+│  │   PX4 SITL   │◄──►│  ROS 2 Bridge│   │  RTK Rover    │  │
+│  │  (Autopilot) │    │ (micro-XRCE) │   │  (rtk_pos.)   │  │
+│  └──────────────┘    └──────┬───────┘   └───────────────┘  │
+│                             │                               │
+│              ┌──────────────┼──────────────┐               │
+│  ┌───────────▼──┐  ┌────────▼────┐  ┌─────▼──────────┐    │
+│  │ path_planning│  │   bringup   │  │target_detection│    │
+│  │              │  │ (launcher)  │  │  _tracking     │    │
+│  └──────────────┘  └─────────────┘  └────────────────┘    │
+└─────────────────────────────────────────────────────────────┘
+```
+
 ## 3. Connection / port map
 
 | From → To | Protocol / port | Carries |

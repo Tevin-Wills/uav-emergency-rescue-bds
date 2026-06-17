@@ -17,15 +17,22 @@ sudo locale-gen en_US en_US.UTF-8
 sudo update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
 export LANG=en_US.UTF-8
 
-# 2. Add the ROS 2 apt repository
+# 2. Enable the universe repository
 sudo apt install software-properties-common curl -y
-sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | sudo apt-key add -
-sudo sh -c 'echo "deb http://packages.ros.org/ros2/ubuntu $(lsb_release -cs) main" > /etc/apt/sources.list.d/ros2.list'
+sudo add-apt-repository universe
 
-# 3. Install ROS 2 Jazzy desktop
+# 3. Add the ROS 2 GPG key to a keyring (apt-key is removed in Ubuntu 24.04)
+sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \
+    -o /usr/share/keyrings/ros-archive-keyring.gpg
+
+# 4. Add the ROS 2 apt repository, signed by that keyring
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" \
+    | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
+
+# 5. Install ROS 2 Jazzy desktop
 sudo apt update && sudo apt install ros-jazzy-desktop -y
 
-# 4. Install colcon and rosdep
+# 6. Install colcon and rosdep
 sudo apt install python3-colcon-common-extensions python3-rosdep -y
 sudo rosdep init
 rosdep update

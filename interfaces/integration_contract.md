@@ -144,8 +144,6 @@ Conflicts found between this contract and the code actually on `main`, reviewed 
 
 **ROS 2 Topics Published:** `/rescue/beidou_message`, `/target/emergency_coordinate`
 
-**File Outputs:** Sample message logs in `data/sample_beidou_message.json`
-
 **Expected Test Data:** Successfully decoded BeiDou short message with valid rescue coordinates
 
 **Integration Connection:** `qgc_control` and `path_planning` subscribe to `/target/emergency_coordinate` to trigger mission planning

@@ -2,137 +2,132 @@
 
 ## Purpose
 
-This file defines standard message structures for all data exchanged between the five project modules. These formats must be agreed upon before implementation to guarantee integration compatibility.
+This file defines the message structures exchanged between modules. It documents the
+**messages actually implemented** (standard ROS 2 types plus the two custom types in the
+`interfaces` package), verified against the node source. Topic names and publisher/subscriber
+wiring are in [`ros2_topics.md`](ros2_topics.md); coordinate conventions are in
+[`coordinate_format.md`](coordinate_format.md).
+
+> Earlier drafts of this file described JSON payloads; the system uses native ROS 2 messages.
+> Standard ROS types are used wherever possible to avoid custom dependencies.
 
 ---
 
-## 1. UAV Position Message
+## 1. UAV Position — `sensor_msgs/NavSatFix`
 
-Published by: `rtk_positioning`
-Subscribed by: `path_planning`, `qgc_control`
+Topic: `/uav/rtk_position` (RTK-corrected) and `/uav/raw_gps` (raw). Published by
+`rtk_positioning`; subscribed by `path_planning`, `target_detection_tracking`.
 
-```json
-{
-  "uav_id": "UAV_01",
-  "latitude": 39.98110,
-  "longitude": 116.34720,
-  "altitude": 60.0,
-  "position_mode": "RTK_FIXED",
-  "horizontal_error_m": 0.05,
-  "timestamp": "2026-05-18T14:30:05"
-}
+Standard `NavSatFix`: `header`, `status`, `latitude`, `longitude`, `altitude` (WGS-84,
+metres), and `position_covariance`. The fix-quality label is carried separately on
+`/uav/rtk_status` (below) rather than overloading `NavSatFix.status`.
+
+---
+
+## 2. RTK Status — `std_msgs/String`
+
+Topic: `/uav/rtk_status`. Published by `rtk_positioning`; subscribed by `qgc_control`,
+`target_detection_tracking`.
+
+Format: `code|name|sigma_m`, e.g. `3|RTK_FIXED|0.032`.
+
+| Field | Meaning |
+|---|---|
+| `code` | numeric fix code |
+| `name` | `RTK_FIXED`, `RTK_FLOAT`, `GNSS_ONLY`, or `NO_FIX` |
+| `sigma_m` | reported 1-σ horizontal accuracy in metres |
+
+---
+
+## 3. RTK Mission Viability — `std_msgs/String`
+
+Topic: `/rtk/mission_viability`. Published by `rtk_positioning`; subscribed by `qgc_control`.
+The RTK-accuracy gate that governs the precision landing. Values include `LANDING_VIABLE`
+and `APPROACH_VIABLE` (degraded states hold/abort the landing).
+
+Companion numeric RTK topics: `/rtk/accuracy` and `/rtk/error_metrics`
+(`std_msgs/Float32MultiArray`), `/rtk/baseline_km` (`std_msgs/Float32`).
+
+---
+
+## 4. Simulated RTCM — `interfaces/SimulatedRtcm`
+
+Topic: `/rtk/simulated_rtcm`. Internal to `rtk_positioning` (the simulated correction stream
+that drives the FIXED→FLOAT→GNSS degradation model). Definition
+(`ros2_ws/src/interfaces/msg/SimulatedRtcm.msg`):
+
+```
+std_msgs/Header header
+uint8   sequence_id
+uint8   fragment_id
+bool    fragmented
+uint16  length
+bool    correction_available
+float32 correction_age_sec
+float32 correction_quality
+string  correction_source
+float32 gnss_noise_std_m
 ```
 
 ---
 
-## 2. RTK-Corrected Position Message
+## 5. Emergency Target Coordinate — `interfaces/EmergencyCoordinate`
 
-Published by: `rtk_positioning` (after RTCM correction applied)
-Subscribed by: `path_planning`, `qgc_control`
+Topic: `/target/emergency_coordinate`. Published by `beidou_short_message`; subscribed by
+`qgc_control`, `path_planning`. Definition
+(`ros2_ws/src/interfaces/msg/EmergencyCoordinate.msg`):
 
-Same structure as UAV Position Message with `position_mode` set to `RTK_FIXED` or `RTK_FLOAT`.
-
----
-
-## 3. Emergency Target Coordinate
-
-Published by: `beidou_short_message`
-Subscribed by: `qgc_control`, `path_planning`
-
-```json
-{
-  "target_id": "TARGET_001",
-  "latitude": 39.98125,
-  "longitude": 116.34788,
-  "altitude": 42.0,
-  "priority": "urgent",
-  "source": "beidou_short_message",
-  "timestamp": "2026-05-18T14:30:00"
-}
+```
+std_msgs/Header header
+float64 latitude        # decimal degrees (WGS-84)
+float64 longitude       # decimal degrees (WGS-84)
+string  source_id       # BeiDou terminal / destination ID that sent the message
+string  raw_message     # original decoded short message
 ```
 
 ---
 
-## 4. Target Detection Result
+## 6. BeiDou Short Message — `std_msgs/String`
 
-Published by: `target_detection_tracking`
-Subscribed by: `path_planning`
-
-```json
-{
-  "detected": true,
-  "confidence": 0.93,
-  "bounding_box": {
-    "x": 320,
-    "y": 240,
-    "width": 80,
-    "height": 80
-  },
-  "timestamp": "2026-05-18T14:31:00"
-}
-```
+Topic: `/rescue/beidou_message`. Published by `beidou_short_message`. The raw decoded
+short-message text (the structured coordinate is published separately as
+`EmergencyCoordinate` above).
 
 ---
 
-## 5. Path Planning Output
+## 7. Target Detection — `std_msgs/Bool` + `geometry_msgs/PoseStamped`
 
-Published by: `path_planning`
-Subscribed by: `qgc_control`
+Published by `target_detection_tracking`; subscribed by `path_planning` (and `qgc_control`
+for the detection flag).
 
-```json
-{
-  "path_id": "PATH_001",
-  "waypoints": [
-    {"latitude": 39.98110, "longitude": 116.34720, "altitude": 60.0},
-    {"latitude": 39.98115, "longitude": 116.34740, "altitude": 58.0},
-    {"latitude": 39.98125, "longitude": 116.34788, "altitude": 42.0}
-  ],
-  "status": "planned",
-  "timestamp": "2026-05-18T14:30:10"
-}
-```
+- `/target/detection` — `std_msgs/Bool` — `true` when a target is currently detected.
+- `/target/location` — `geometry_msgs/PoseStamped` — target pose in the `px4_local_enu` frame.
 
 ---
 
-## 6. Mission Status
+## 8. Path Planning Output — `nav_msgs/Path`
 
-Published by: `qgc_control`
-Subscribed by: All modules
-
-```json
-{
-  "mission_id": "MISSION_001",
-  "phase": "IN_FLIGHT",
-  "active_waypoint": 2,
-  "timestamp": "2026-05-18T14:31:30"
-}
-```
-
-Phase values: `IDLE`, `DISTRESS_RECEIVED`, `MISSION_PLANNED`, `PRE_FLIGHT`, `IN_FLIGHT`, `TARGET_ACQUIRED`, `LANDING`, `MISSION_COMPLETE`
+- `/planner/path` — `nav_msgs/Path` — planned obstacle-free path. Published by `path_planning`;
+  subscribed by `qgc_control`.
+- `/map/obstacles` — `nav_msgs/OccupancyGrid` (latched) — obstacle map used for planning.
 
 ---
 
-## 7. BeiDou Short Message
+## 9. Mission Status & Waypoints
 
-Published by: `beidou_short_message`
-Subscribed by: `qgc_control`
+Published by `mission_status_node` (inside the `qgc_control` package); subscribed by all
+modules / `path_planning`.
 
-```json
-{
-  "message_id": "BDS_0042",
-  "sender_id": "RESCUE_BASE_01",
-  "raw_message": "SOS:39.98125N116.34788E",
-  "decoded_latitude": 39.98125,
-  "decoded_longitude": 116.34788,
-  "received_at": "2026-05-18T14:29:58"
-}
-```
+- `/mission/status` — `std_msgs/String` — current phase. Phase values:
+  `IDLE`, `DISTRESS_RECEIVED`, `MISSION_PLANNED`, `IN_FLIGHT`, `TARGET_ACQUIRED`, `LANDING`,
+  `LANDING_HOLD`, `LANDING_VIABLE`, `COMPLETE`, `ABORTED`.
+- `/mission/waypoints` — `nav_msgs/Path` (latched) — mission waypoints for `path_planning`.
+- `/uav/telemetry` — `std_msgs/String` — aggregated phase + RTK quality for operators.
 
 ---
 
 ## Notes
 
-- All timestamps are ISO 8601 UTC.
-- Coordinates always use WGS84 decimal degrees. See [`coordinate_format.md`](coordinate_format.md).
-- ROS 2 custom message definitions (.msg files) live in `ros2_ws/src/interfaces/msg/`.
+- Coordinates use WGS-84 decimal degrees throughout. See [`coordinate_format.md`](coordinate_format.md).
+- All custom `.msg` definitions live in `ros2_ws/src/interfaces/msg/`.
 - Update this file whenever a message format changes — all team members must be notified.

@@ -180,7 +180,6 @@ ros2_ws/src/rtk_positioning/
 │
 └── docs/
     ├── LEVEL1_IMPLEMENTATION_PLAN.md
-    ├── CLAUDE_LEVEL1_PROMPT.md
     ├── level1_conceptual_rtk_simulation.md
     ├── rtk_topic_interface.md
     └── simulation_assumptions.md

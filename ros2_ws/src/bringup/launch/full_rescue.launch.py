@@ -39,6 +39,7 @@ def generate_launch_description():
     use_rtk = LaunchConfiguration("use_rtk")
     use_detection = LaunchConfiguration("use_detection")
     scenario = LaunchConfiguration("scenario")
+    gz_model_name = LaunchConfiguration("gz_model_name")
     px4_ns = LaunchConfiguration("px4_ns")
     rgb_gz_topic = LaunchConfiguration("rgb_gz_topic")
     # PX4 publishes /fmu/* under its instance namespace (launch_sim_24.sh uses -i 1
@@ -77,6 +78,12 @@ def generate_launch_description():
             "px4_ns", default_value="px4_1",
             description="PX4 uXRCE instance namespace (launch_sim_24.sh uses -i 1 -> px4_1)."),
         DeclareLaunchArgument(
+            # Forwarded to the RTK launch so the navsat bridge targets the right
+            # spawned model. SIM_MODEL=gz_x500 -> x500_1 (GPS-only, no render);
+            # SIM_MODEL=gz_x500_depth -> x500_depth_1 (camera+depth, GPU render).
+            "gz_model_name", default_value="x500_depth_1",
+            description="Gazebo spawned model name (x500_1 for gz_x500, x500_depth_1 for gz_x500_depth)."),
+        DeclareLaunchArgument(
             # Model-dependent: with gz_x500_depth confirm via `gz topic -l` on the
             # NATIVE GPU PC (model name may be x500_depth_*, sensor may differ).
             "rgb_gz_topic",
@@ -101,7 +108,10 @@ def generate_launch_description():
         # world_origin to the same Zurich datum.
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(rtk_launch),
-            launch_arguments={"scenario": scenario}.items(),
+            launch_arguments={
+                "scenario": scenario,
+                "gz_model_name": gz_model_name,
+            }.items(),
             condition=IfCondition(use_rtk)),
 
         # --- Perception: target_detection's own launch (camera+depth bridges + node) ---

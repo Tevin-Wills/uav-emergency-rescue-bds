@@ -2,80 +2,63 @@
 
 ## Purpose
 
-This file defines the standard coordinate format that all five modules must use when exchanging position data. Using a consistent format prevents unit mismatches and integration errors.
+This file defines the coordinate conventions all modules must use when exchanging position
+data, so there are no unit or datum mismatches. The concrete message structures are in
+[`message_formats.md`](message_formats.md); topic names are in [`ros2_topics.md`](ros2_topics.md).
 
 ---
 
-## Standard UAV Position Format
+## Geodetic conventions (apply to every position)
 
-All position data shared between modules uses the following JSON-compatible structure:
-
-```json
-{
-  "uav_id": "UAV_01",
-  "latitude": 39.98110,
-  "longitude": 116.34720,
-  "altitude": 60.0,
-  "position_mode": "RTK_FIXED",
-  "horizontal_error_m": 0.05,
-  "timestamp": "2026-05-18T14:30:05"
-}
-```
-
-### Fields
-
-| Field | Unit | Description |
-|---|---|---|
-| `uav_id` | string | Unique identifier for the UAV |
-| `latitude` | decimal degrees (WGS84) | Positive = North |
-| `longitude` | decimal degrees (WGS84) | Positive = East |
-| `altitude` | metres above mean sea level | Ellipsoidal height from GNSS |
-| `position_mode` | string | `RTK_FIXED`, `RTK_FLOAT`, `GPS_ONLY`, `UNKNOWN` |
-| `horizontal_error_m` | metres | Estimated horizontal positioning error |
-| `timestamp` | ISO 8601 UTC | Format: `YYYY-MM-DDTHH:MM:SS` |
+| Field | Unit / convention |
+|---|---|
+| `latitude` | decimal degrees, WGS-84, positive = North |
+| `longitude` | decimal degrees, WGS-84, positive = East |
+| `altitude` | metres; GNSS ellipsoidal height (see datum note below) |
+| timestamps | ISO 8601 **UTC** (`YYYY-MM-DDTHH:MM:SS`); never local time |
 
 ---
 
-## Emergency Target Coordinate Format
+## System datum
 
-Rescue target coordinates provided by the BeiDou short message module:
+The whole system shares one datum: **Zurich, `47.3980, 8.5462`** (`bringup/config/datum.yaml`,
+mirrored in the RTK configs). All simulated positions — UAV, RTK base, and the BeiDou distress
+coordinate (datum + offset) — are expressed relative to this datum. **Do not change it** without
+updating every config together (see `docs/NATIVE_PC_RUNBOOK.md` §3).
 
-```json
-{
-  "target_id": "TARGET_001",
-  "latitude": 39.98125,
-  "longitude": 116.34788,
-  "altitude": 42.0,
-  "priority": "urgent",
-  "source": "beidou_short_message",
-  "timestamp": "2026-05-18T14:30:00"
-}
-```
+---
 
-### Fields
+## UAV position
 
-| Field | Unit | Description |
-|---|---|---|
-| `target_id` | string | Unique identifier for this rescue target |
-| `latitude` | decimal degrees (WGS84) | Target latitude |
-| `longitude` | decimal degrees (WGS84) | Target longitude |
-| `altitude` | metres | Target estimated altitude (surface level if unknown) |
-| `priority` | string | `urgent`, `normal`, `low` |
-| `source` | string | Origin of the coordinate (`beidou_short_message`, `manual`, etc.) |
-| `timestamp` | ISO 8601 UTC | When the coordinate was generated |
+UAV position is published as `sensor_msgs/NavSatFix` on `/uav/rtk_position` (RTK-corrected) and
+`/uav/raw_gps` (raw), with `latitude`/`longitude`/`altitude` in the conventions above.
+
+Fix quality is carried alongside on `/uav/rtk_status` (`std_msgs/String`, format
+`code|name|sigma_m`). `name` is one of:
+
+- `RTK_FIXED` — centimetre-level (expected ≤ 0.05 m horizontal)
+- `RTK_FLOAT` — decimetre-level
+- `GNSS_ONLY` — uncorrected GNSS
+- `NO_FIX` — no valid solution
+
+---
+
+## Emergency target coordinate
+
+Rescue target coordinates from the BeiDou module are published as
+`interfaces/EmergencyCoordinate` on `/target/emergency_coordinate`
+(`latitude`, `longitude`, `source_id`, `raw_message` + `header`). They follow the same WGS-84
+decimal-degree convention. The target is derived from the system datum plus an offset, so it
+stays consistent with the UAV/RTK frame.
 
 ---
 
 ## Rules
 
-- Always use WGS84 as the geodetic datum.
-- Altitude is always metres above mean sea level (AMSL) unless explicitly stated otherwise.
-- Timestamps must be UTC. Do not use local time.
-- `position_mode` must always be populated — never leave it blank or unknown if avoidable.
-- Coordinate accuracy for RTK Fixed mode is expected to be ≤ 0.05 m horizontal.
-
----
-
-## ROS 2 Equivalent
-
-When publishing positions as ROS 2 messages, use `sensor_msgs/NavSatFix` for raw GNSS and `geometry_msgs/PoseStamped` for transformed positions in the local frame. Custom message definitions are in `ros2_ws/src/interfaces/`.
+- Always use WGS-84 as the geodetic datum.
+- Timestamps must be UTC.
+- RTK-Fixed accuracy is expected to be ≤ 0.05 m horizontal; the landing gate
+  (`/rtk/mission_viability`) enforces viability before precision landing.
+- Do not introduce a second coordinate frame for shared topics; the local ENU frame
+  (`px4_local_enu`, used by `/target/location`) is the only non-WGS-84 frame and is labelled
+  explicitly in the message `header.frame_id`.

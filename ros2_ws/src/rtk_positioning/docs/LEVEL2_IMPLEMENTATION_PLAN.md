@@ -283,7 +283,6 @@ ros2_ws/src/rtk_positioning/
 │
 └── docs/
     ├── LEVEL2_IMPLEMENTATION_PLAN.md
-    ├── CLAUDE_LEVEL2_PROMPT.md
     ├── level2_mavlink_aware_rtk_simulation.md
     └── level2_px4_integration_notes.md
 ```

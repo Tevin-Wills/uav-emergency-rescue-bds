@@ -87,4 +87,4 @@ If a module is not ready for final integration:
 
 - The module can be stubbed: publish realistic test data on its required topics.
 - This allows the rest of the system to demonstrate integration even if one module is incomplete.
-- Stub data should be stored in `data/` and loaded by a simple Python publisher node.
+- Stub data should be published on the required topics by a simple Python publisher node.

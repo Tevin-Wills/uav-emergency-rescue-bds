@@ -155,8 +155,6 @@ rtk_positioning/
 └── docs/
     ├── LEVEL1_IMPLEMENTATION_PLAN.md
     ├── LEVEL2_IMPLEMENTATION_PLAN.md
-    ├── CLAUDE_LEVEL1_PROMPT.md
-    ├── CLAUDE_LEVEL2_PROMPT.md
     ├── level1_conceptual_rtk_simulation.md
     ├── level2_mavlink_aware_rtk_simulation.md
     ├── level2_px4_integration_notes.md

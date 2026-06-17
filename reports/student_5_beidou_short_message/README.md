@@ -16,7 +16,6 @@ BeiDou Short Message Communication — interface with the BeiDou short message s
 
 - Decoded BeiDou message log showing correct coordinate extraction.
 - ROS 2 topic echo for `/rescue/beidou_message` and `/target/emergency_coordinate`.
-- Sample message file in `data/sample_beidou_message.json`.
 
 ## Folder Structure
 

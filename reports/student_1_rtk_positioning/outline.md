@@ -27,7 +27,7 @@
 - RTK fix acquisition time
 - Horizontal and vertical positioning error
 - Comparison: GPS-only vs RTK Float vs RTK Fixed
-- Data from sample_rtk_log.csv
+- Data from the RTK logs in `results/logs/rtk_positioning/`
 
 ## Chapter 6 — Integration with Other Modules
 - How rtk_positioning feeds path_planning and qgc_control

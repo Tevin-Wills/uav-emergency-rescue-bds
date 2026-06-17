@@ -9,9 +9,9 @@ External prerequisites (start separately):
   2. micro-XRCE-DDS Agent
   3. QGroundControl (for mission-mode flight)
 
-Usage:
-  ros2 launch simulation full_rescue_sim.launch.py
-  ros2 launch simulation full_rescue_sim.launch.py use_rtk:=false use_detection:=false
+Usage (run by file path — `simulation` is not a ROS 2 package):
+  ros2 launch simulation/launch/full_rescue_sim.launch.py
+  ros2 launch simulation/launch/full_rescue_sim.launch.py use_rtk:=false use_detection:=false
 
 Launch args (forwarded to bringup):
   use_rtk        (default true)  -- launch the real rtk_positioning node

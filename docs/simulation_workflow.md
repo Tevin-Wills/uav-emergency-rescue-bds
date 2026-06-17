@@ -2,7 +2,10 @@
 
 ## Overview
 
-This document describes how simulation is structured for this project — from individual module testing through to the full integrated rescue mission simulation.
+This document describes how simulation is structured for this project — from individual
+module testing through to the full integrated rescue mission simulation. For the
+authoritative toolchain and topic/port map see [`PIPELINE_ARCHITECTURE.md`](PIPELINE_ARCHITECTURE.md);
+for the step-by-step end-to-end run see [`NATIVE_PC_RUNBOOK.md`](NATIVE_PC_RUNBOOK.md).
 
 ---
 
@@ -12,15 +15,24 @@ This document describes how simulation is structured for this project — from i
 |---|---|
 | PX4 SITL | UAV autopilot firmware (Software-In-The-Loop) |
 | Gazebo Harmonic | 3D physics and rendering environment |
-| micro-XRCE-DDS Agent | Bridge between PX4 and ROS 2 |
+| micro-XRCE-DDS Agent | Bridge between PX4 and ROS 2 (`/fmu/*` via `px4_msgs`) |
+| ros_gz_bridge | Bridges Gazebo sensors (navsat, camera, depth) → ROS 2 |
 | ROS 2 Jazzy | Module communication middleware |
-| QGroundControl | Mission upload and telemetry monitoring |
+| QGroundControl | Mission upload and telemetry monitoring (runs on Windows for WSL users) |
+
+Two backbone configurations are used (see `PIPELINE_ARCHITECTURE.md` §6):
+
+| Config | Sim model | Enables | Runs on |
+|---|---|---|---|
+| **RTK / control** | `gz_x500` (GPS only) | rtk_positioning + control + flight | WSL (headless) or native |
+| **Full perception** | `gz_x500_depth` (+ camera/depth) | + target_detection_tracking | native GPU PC (hardware OpenGL) |
 
 ---
 
 ## Phase 1 — Individual Module Simulation
 
-Each team member develops and tests their module in isolation first. This can be done on any machine (native Ubuntu or WSL2).
+Each team member develops and tests their module in isolation first. This can be done on
+any machine (native Ubuntu or WSL2).
 
 | Module | What to simulate independently |
 |---|---|
@@ -30,7 +42,9 @@ Each team member develops and tests their module in isolation first. This can be
 | `path_planning` | Feed test waypoints and obstacle map; verify trajectory output |
 | `beidou_short_message` | Inject a test message; verify decoded coordinate is published |
 
-Each student can use stub publishers to simulate the outputs of modules they depend on. Sample stub data is in `data/`.
+Each student can use stub publishers to simulate the outputs of modules they depend on —
+a simple Python node publishing realistic data on the required topics (topic and message
+definitions are in `interfaces/`).
 
 ---
 
@@ -41,32 +55,35 @@ Before full integration, verify that shared interfaces are compatible:
 1. Confirm all topic names match [`interfaces/ros2_topics.md`](../interfaces/ros2_topics.md).
 2. Confirm all message formats match [`interfaces/message_formats.md`](../interfaces/message_formats.md).
 3. Confirm coordinate format matches [`interfaces/coordinate_format.md`](../interfaces/coordinate_format.md).
+4. Confirm module contracts match [`interfaces/integration_contract.md`](../interfaces/integration_contract.md).
 
-Run two modules together and confirm that messages flow correctly between them before adding a third.
+Run two modules together and confirm that messages flow correctly between them before
+adding a third.
 
 ---
 
 ## Phase 3 — Full Integrated Simulation
 
-The final integrated simulation runs all five modules together on one computer (native Ubuntu 24.04 recommended).
+The integrated simulation runs all five modules together. The control + RTK tiers run on
+WSL; the perception tier needs a native GPU PC (see `NATIVE_PC_RUNBOOK.md`).
 
-The main launch file will be:
+**Startup sequence:**
 
-```
-simulation/launch/full_rescue_sim.launch.py
-```
+1. Start the backbone — PX4 SITL + Gazebo Harmonic + micro-XRCE-DDS Agent:
+   ```bash
+   ./scripts/launch_sim_24.sh                 # RTK/control (gz_x500)
+   SIM_MODEL=gz_x500_depth ./scripts/launch_sim_24.sh   # full perception
+   ```
+2. Connect QGroundControl (UDP 18571) to monitor telemetry and upload a `.plan` mission.
+3. Launch the five-module ROS 2 graph:
+   ```bash
+   ros2 launch bringup full_rescue.launch.py use_rtk:=true use_detection:=<true on GPU PC>
+   ```
+   A thin convenience wrapper also exists, run by file path (`simulation` is not a ROS 2 package):
+   `ros2 launch simulation/launch/full_rescue_sim.launch.py` (delegates to `bringup/full_rescue.launch.py`).
+4. Inject a simulated BeiDou short message and observe the rescue mission execute end-to-end.
 
-> This file is a placeholder. It will be implemented during the integration phase.
-
-The expected sequence for the full simulation:
-
-1. Start PX4 SITL + Gazebo Harmonic.
-2. Start micro-XRCE-DDS Agent.
-3. Source ROS 2 and the workspace.
-4. Launch all five modules using `full_rescue_sim.launch.py`.
-5. Open QGroundControl.
-6. Inject a simulated BeiDou short message.
-7. Observe the full rescue mission execute end-to-end.
+See `NATIVE_PC_RUNBOOK.md` §5–§8 for the per-topic health checks and the mission flow to observe.
 
 ---
 
@@ -76,49 +93,30 @@ The expected sequence for the full simulation:
 |---|---|---|
 | Individual module dev | Yes | Yes |
 | PX4 SITL only | Yes | Yes |
-| Full Gazebo simulation | Yes | Limited |
-| Final integration | Yes (recommended) | Not recommended |
-
-Team members on WSL2 should develop their module in isolation and test it individually. The final integration run should happen on the designated integration computer (native Ubuntu).
+| RTK / control tier | Yes | Yes (headless) |
+| Full perception (camera/depth + YOLO) | Yes | No (needs hardware OpenGL) |
+| Final integration demo | Yes (recommended) | Control/RTK only |
 
 ---
 
-## Simulation World
+## Simulation World and Models
 
-The rescue scenario world file is:
+The current integrated runs use the **default Gazebo world** with the PX4 `x500` /
+`x500_depth` model. A bespoke disaster world and custom Gazebo models are scoped under
+`simulation/` but **not yet built** — those folders currently hold README stubs describing
+the intended assets:
 
-```
-simulation/worlds/earthquake_rescue_world.sdf
-```
-
-This world includes:
-- Terrain representing a post-earthquake disaster area.
+- `simulation/worlds/` — planned `earthquake_rescue_world.sdf` (post-earthquake terrain).
 - `simulation/models/collapsed_building/` — building rubble obstacles.
 - `simulation/models/obstacle_blocks/` — additional obstacles for path planning.
-- `simulation/models/survivor_marker/` — target that `target_detection_tracking` must detect.
+- `simulation/models/survivor_marker/` — target for `target_detection_tracking`.
 - `simulation/models/landing_pad/` — precision landing target zone.
-
-> World and model files are placeholders. They will be populated during the simulation development phase.
 
 ---
 
 ## Mission Files
 
-QGroundControl mission files for the simulation are in `missions/`:
-
-```
-missions/
-├── qgc_search_mission.plan       — area search pattern
-├── emergency_target_mission.plan — fly to BeiDou rescue coordinate
-└── fixed_point_landing.plan      — precision landing sequence
-```
-
----
-
-## TODO
-
-- [ ] Implement `simulation/launch/full_rescue_sim.launch.py`
-- [ ] Create `simulation/worlds/earthquake_rescue_world.sdf`
-- [ ] Create Gazebo model files for all four models
-- [ ] Add timing diagrams per mission phase
-- [ ] Document abort and return-to-home procedures
+QGroundControl mission `.plan` files live in `missions/`. The flight itself is currently
+run in **PX4 mission mode** — a `.plan` is uploaded via QGC and PX4 executes it while the
+ROS 2 modules run alongside. The specific search / target / landing `.plan` files are
+created in QGC during mission development and saved to `missions/` (see `missions/README.md`).

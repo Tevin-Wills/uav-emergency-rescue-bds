@@ -62,10 +62,12 @@ uav-emergency-rescue-bds/
 │
 ├── docs/                          # Project-level documentation
 │   ├── project_overview.md
-│   ├── system_architecture.md
+│   ├── PIPELINE_ARCHITECTURE.md   # canonical toolchain + topic/port map
+│   ├── NATIVE_PC_RUNBOOK.md       # full end-to-end run guide
 │   ├── team_roles.md
 │   ├── simulation_workflow.md
 │   ├── integration_plan.md
+│   ├── STAGE2_3_DASHBOARD_PLAN.md
 │   └── environment_setup.md
 │
 ├── setup/                         # Installation guides
@@ -98,14 +100,19 @@ uav-emergency-rescue-bds/
 │
 ├── missions/                      # QGroundControl .plan mission files
 │
-├── data/                          # Sample data for module testing
+├── scripts/                       # Build + simulation-launch helper scripts
+│   ├── launch_sim_24.sh
+│   └── build_ros2.sh
+│
+├── run_level1.sh / run_level2.sh / run_level3.sh   # Per-level RTK launch wrappers
 │
 ├── reports/                       # Individual student report folders
 │   ├── student_1_rtk_positioning/
 │   ├── student_2_qgc_control/
 │   ├── student_3_target_detection/
 │   ├── student_4_path_planning/
-│   └── student_5_beidou_short_message/
+│   ├── student_5_beidou_short_message/
+│   └── system_integration/
 │
 └── results/                       # Simulation outputs
     ├── screenshots/
@@ -183,4 +190,4 @@ main   ← single shared working + integration branch (all modules)
 
 ## Access
 
-This repository is **private** and intended only for the five team members. Do not share access without team agreement.
+This repository is **public**. `main` is protected (force-push and deletion are blocked). The five team members commit module work to `main`; external contributions should go through a pull request.

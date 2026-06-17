@@ -48,7 +48,23 @@ Add to `~/.bashrc` for persistence. If rendering remains broken, fall back to so
 export LIBGL_ALWAYS_SOFTWARE=1
 ```
 
-> Software rendering is stable but slow. For full simulation, use native Ubuntu.
+> Software rendering is stable but slow.
+
+### Hardware GPU on WSL2 (d3d12) — for the perception tier
+
+For camera/depth sensor rendering (the perception tier), software GL is too slow. WSL2 can route
+Gazebo's OpenGL through the real GPU via the **d3d12 (Dozen)** Mesa driver:
+
+```bash
+export MESA_LOADER_DRIVER_OVERRIDE=d3d12
+export GALLIUM_DRIVER=d3d12
+export MESA_D3D12_DEFAULT_ADAPTER_NAME=NVIDIA   # match your GPU vendor
+```
+
+`scripts/launch_sim_24.sh` **sets these automatically** and runs a GPU preflight check before
+starting Gazebo. Verify the GPU is used (not `llvmpipe`) with `glxinfo -B | grep "OpenGL renderer"`.
+The RTK/control tier (GPS only, `gz_x500`) does not need this; for the full camera/depth tier see
+`docs/NATIVE_PC_RUNBOOK.md`.
 
 ---
 

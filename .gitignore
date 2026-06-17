@@ -9,7 +9,6 @@ log/
 __pycache__/
 
 # PX4 build artifacts
-px4/build/
 *.px4
 *.elf
 *.bin
@@ -43,7 +42,6 @@ Thumbs.db
 results/README.md
 results/logs/README.md
 results/graphs/rtk_positioning/README.md
-results/notebooklm/README.md
 
 # Run-generated artifacts (regenerated every integration run; do NOT commit raw runs).
 # Curated outputs selected for the report can still be added explicitly with `git add -f`.

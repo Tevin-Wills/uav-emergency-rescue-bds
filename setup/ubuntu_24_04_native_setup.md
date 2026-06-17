@@ -80,4 +80,4 @@ source install/setup.bash
 
 - Always source ROS 2 before building or running nodes.
 - For Gazebo + PX4 simulation, see [`px4_setup.md`](px4_setup.md).
-- For the full integrated simulation launch, see `simulation/launch/full_rescue_sim.launch.py` once it is implemented.
+- For the full integrated simulation, start the backbone with `scripts/launch_sim_24.sh`, then launch the modules with `ros2 launch bringup full_rescue.launch.py` (a thin wrapper also exists, run by path: `ros2 launch simulation/launch/full_rescue_sim.launch.py`). See `docs/NATIVE_PC_RUNBOOK.md`.
