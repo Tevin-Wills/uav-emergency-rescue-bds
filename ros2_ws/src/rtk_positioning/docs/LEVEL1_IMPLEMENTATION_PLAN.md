@@ -166,10 +166,6 @@ ros2_ws/src/rtk_positioning/
 │       ├── rtk_status_manager.py
 │       └── logger_node.py
 │
-├── msg/
-│   ├── RtkStatus.msg
-│   └── RtkAccuracy.msg
-│
 ├── config/
 │   ├── level1_rtk_params.yaml
 │   ├── base_station.yaml
@@ -214,8 +210,8 @@ results/
 |---|---|---|---|
 | `/uav/raw_gps` | `sensor_msgs/msg/NavSatFix` | `rtk_positioning_node` | Simulated noisy GNSS position |
 | `/uav/rtk_position` | `sensor_msgs/msg/NavSatFix` | `rtk_positioning_node` | Simulated RTK-corrected position |
-| `/uav/rtk_status` | `RtkStatus.msg` or temporary standard message | `rtk_positioning_node` | RTK state and correction quality |
-| `/rtk/accuracy` | `RtkAccuracy.msg` or temporary standard message | `rtk_positioning_node` | Error and improvement metrics |
+| `/uav/rtk_status` | `std_msgs/String` (`code\|name\|σ`) | `rtk_positioning_node` | RTK state and correction quality |
+| `/rtk/accuracy` | `std_msgs/Float32MultiArray` | `rtk_positioning_node` | Error and improvement metrics |
 | `/rtk/error_metrics` | Standard message or CSV only | `rtk_positioning_node` or `logger_node` | Error analysis data |
 
 If custom messages create build complexity, standard ROS 2 messages such as `std_msgs/msg/String` or `std_msgs/msg/Float32MultiArray` may be used temporarily, but this must be documented as a Level 1 simplification.
@@ -465,6 +461,15 @@ Level 1 transition pattern:
 ---
 
 ## 10. Custom Messages
+
+> **Implementation note — NOT built.** `RtkStatus.msg` and `RtkAccuracy.msg` below were the
+> originally planned custom types. They were **never created**; Level 1 (and every later level)
+> use the standard-message simplification flagged in §7 instead:
+> `/uav/rtk_status` → `std_msgs/String` (`code|name|σ`) and `/rtk/accuracy` → `std_msgs/Float32MultiArray`.
+> The status-code scheme in §10.1 is still used (encoded in the String). The richer fields below
+> (`correction_age_sec`, `correction_quality`, `improvement_percent`, etc.) are realized elsewhere —
+> in `interfaces/SimulatedRtcm.msg`, the logger CSV columns, and `/rtk/error_metrics`. The definitions
+> are retained only as design reference.
 
 ### 10.1 `RtkStatus.msg`
 

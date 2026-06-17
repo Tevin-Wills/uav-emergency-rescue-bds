@@ -107,11 +107,11 @@ interfaces/coordinate_format.md
 
 ### `/uav/rtk_status`
 
-**Type:** `std_msgs/msg/String` *(Level 1 simplification)*
+**Type:** `std_msgs/msg/String` *(standard message — kept through all levels)*
 
 **Publisher:** `rtk_positioning_node`
 
-**Purpose:** Current RTK fix state and accuracy. Custom message `RtkStatus.msg` is planned for Level 2 when the `interfaces` package is built out.
+**Purpose:** Current RTK fix state and accuracy. (A custom `RtkStatus.msg` was once proposed but **never built** — this `std_msgs/String` format is the one used across all levels. See *Proposed custom messages (not adopted)* below.)
 
 **Format:**
 
@@ -142,11 +142,11 @@ interfaces/coordinate_format.md
 
 ### `/rtk/accuracy`
 
-**Type:** `std_msgs/msg/Float32MultiArray` *(Level 1 simplification)*
+**Type:** `std_msgs/msg/Float32MultiArray` *(standard message — kept through all levels)*
 
 **Publisher:** `rtk_positioning_node`
 
-**Purpose:** Accuracy comparison between raw GNSS and RTK-corrected position. Custom message `RtkAccuracy.msg` is planned for Level 2.
+**Purpose:** Accuracy comparison between raw GNSS and RTK-corrected position. (A custom `RtkAccuracy.msg` was proposed but **never built** — this `std_msgs/Float32MultiArray` format is used across all levels.)
 
 **Format:** `[raw_gnss_std_m, rtk_std_m, improvement_percent]`
 
@@ -160,9 +160,13 @@ RTK_FIXED:   [1.5, 0.03, 98.0]
 
 ---
 
-## Future Custom Messages
+## Proposed custom messages (not adopted)
 
-When the `interfaces` package is fully configured as an `ament_cmake` package, these custom messages will replace the Level 1 simplifications:
+These custom messages were originally proposed to replace the standard-message formats above once
+the `interfaces` package was built. The `interfaces` package **was** built (it ships
+`EmergencyCoordinate.msg` and `SimulatedRtcm.msg`), but **these two were never created** — the
+`std_msgs/String` and `std_msgs/Float32MultiArray` formats above remained in use across all levels.
+The definitions are retained only as design reference:
 
 ### `RtkStatus.msg`
 

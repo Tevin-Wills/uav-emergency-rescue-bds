@@ -309,7 +309,7 @@ results/
 |---|---|---|---|---|
 | PX4/Gazebo pose topic | Depends on bridge setup | PX4/Gazebo/bridge | `px4_pose_adapter_node` | Source vehicle pose |
 | `/rtk/base_station` | `sensor_msgs/msg/NavSatFix` | `base_station_node` | `rtk_positioning_node` | Fixed base station coordinate |
-| `/rtk/simulated_rtcm` | `SimulatedRtcm.msg` or temporary standard message | `rtcm_correction_simulator_node` | `rtk_positioning_node` | Simulated correction-message behavior |
+| `/rtk/simulated_rtcm` | `interfaces/SimulatedRtcm` | `rtcm_correction_simulator_node` | `rtk_positioning_node` | Simulated correction-message behavior |
 
 ### 9.2 Normalized Internal Topic
 
@@ -323,8 +323,8 @@ results/
 |---|---|---|---|
 | `/uav/raw_gps` | `sensor_msgs/msg/NavSatFix` | `rtk_positioning_node` | Simulated raw GNSS position |
 | `/uav/rtk_position` | `sensor_msgs/msg/NavSatFix` | `rtk_positioning_node` | Simulated RTK-corrected position |
-| `/uav/rtk_status` | `RtkStatus.msg` or temporary standard message | `rtk_positioning_node` | RTK state and correction condition |
-| `/rtk/accuracy` | `RtkAccuracy.msg` or temporary standard message | `rtk_positioning_node` | Raw GNSS error, RTK error, improvement |
+| `/uav/rtk_status` | `std_msgs/String` (`code\|name\|σ`) | `rtk_positioning_node` | RTK state and correction condition |
+| `/rtk/accuracy` | `std_msgs/Float32MultiArray` | `rtk_positioning_node` | Raw GNSS error, RTK error, improvement |
 | `/rtk/error_metrics` | Standard message or CSV only | `rtk_positioning_node` or `logger_node` | Error analysis data |
 
 ---
@@ -514,7 +514,8 @@ It should select Level 1 or Level 2 log directory based on configuration.
 
 ## 11.1 `SimulatedRtcm.msg`
 
-Suggested content:
+This message was built and ships in the `interfaces` package
+(`ros2_ws/src/interfaces/msg/SimulatedRtcm.msg`). As-built content:
 
 ```text
 std_msgs/Header header
@@ -526,6 +527,7 @@ bool correction_available
 float32 correction_age_sec
 float32 correction_quality
 string correction_source
+float32 gnss_noise_std_m   # added during implementation (not in the original plan)
 ```
 
 ### Field Meaning
@@ -540,6 +542,7 @@ string correction_source
 | `correction_age_sec` | Age of correction data |
 | `correction_quality` | Quality score from 0.0 to 1.0 |
 | `correction_source` | Example: `simulated_base_station` |
+| `gnss_noise_std_m` | Current GNSS noise std-dev (m) carried with the correction (added during implementation) |
 
 This message is not real MAVLink.
 
