@@ -101,16 +101,31 @@ See `NATIVE_PC_RUNBOOK.md` §5–§8 for the per-topic health checks and the mis
 
 ## Simulation World and Models
 
-The current integrated runs use the **default Gazebo world** with the PX4 `x500` /
-`x500_depth` model. A bespoke disaster world and custom Gazebo models are scoped under
-`simulation/` but **not yet built** — those folders currently hold README stubs describing
-the intended assets:
+The active Gazebo world for this project is **`disaster_baylands`**, located at:
 
-- `simulation/worlds/` — planned `earthquake_rescue_world.sdf` (post-earthquake terrain).
-- `simulation/models/collapsed_building/` — building rubble obstacles.
-- `simulation/models/obstacle_blocks/` — additional obstacles for path planning.
-- `simulation/models/survivor_marker/` — target for `target_detection_tracking`.
-- `simulation/models/landing_pad/` — precision landing target zone.
+```
+simulation/gz_worlds/disaster_baylands.sdf
+```
+
+This is a Baylands-derived post-disaster rescue survey world containing:
+- Baylands terrain and water base (from PX4's built-in Baylands world).
+- Collapsed building and rubble primitives from `simulation/gz_models/`.
+- High-contrast survivor-person models for UAV camera detection tests.
+
+The file is installed into PX4 as `~/Projects/PX4-Autopilot/Tools/simulation/gz/worlds/disaster_baylands.sdf`. Launch it with:
+
+```bash
+cd ~/Projects/PX4-Autopilot
+PX4_GZ_WORLD=disaster_baylands make px4_sitl gz_x500_depthlight
+```
+
+After CMake refreshes its target list, the direct target is also available:
+
+```bash
+make px4_sitl gz_x500_depthlight_disaster_baylands
+```
+
+See [`simulation/worlds/README.md`](../simulation/worlds/README.md) for full setup and usage details.
 
 ---
 

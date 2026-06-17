@@ -37,7 +37,7 @@ WAYPOINTS = [
     (47.3979709, 8.5461649, 30.0),
 ]
 TAKEOFF_ALTITUDE = 30.0
-IMAGE_SAVE_DIR = os.path.expanduser("~/uav_images")
+IMAGE_SAVE_DIR = os.path.expanduser("~/mission_run_01/images")
 
 
 class UAVControlNode(Node):
