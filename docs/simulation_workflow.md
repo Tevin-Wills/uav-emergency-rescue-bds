@@ -101,31 +101,29 @@ See `NATIVE_PC_RUNBOOK.md` §5–§8 for the per-topic health checks and the mis
 
 ## Simulation World and Models
 
-The active Gazebo world for this project is **`disaster_baylands`**, located at:
+The canonical Gazebo world for this project is **`rescue`**, located at:
 
 ```
-simulation/gz_worlds/disaster_baylands.sdf
+worlds/rescue.sdf
 ```
 
-This is a Baylands-derived post-disaster rescue survey world containing:
-- Baylands terrain and water base (from PX4's built-in Baylands world).
-- Collapsed building and rubble primitives from `simulation/gz_models/`.
-- High-contrast survivor-person models for UAV camera detection tests.
+It is a custom post-disaster rescue scene on the project's WGS-84 datum
+(`47.397971`, matching the RTK datum). It includes textured mesh models from the top-level
+`models/` directory, referenced via `model://` URIs:
 
-The file is installed into PX4 as `~/Projects/PX4-Autopilot/Tools/simulation/gz/worlds/disaster_baylands.sdf`. Launch it with:
+| Model dir (`models/`) | Used in the world as |
+|---|---|
+| `collapsed_house`, `collapsed_fire_station`, `collapsed_industrial` | collapsed structures |
+| `person_standing`, `person_walking` | survivors (camera-detection targets) |
+| `oak_tree`, `pine_tree`, `construction_barrel` | scene clutter / obstacles |
 
-```bash
-cd ~/Projects/PX4-Autopilot
-PX4_GZ_WORLD=disaster_baylands make px4_sitl gz_x500_depthlight
-```
+Gazebo resolves `model://<name>` to `models/<name>/` via its resource path (the repo root is on
+`GZ_SIM_RESOURCE_PATH`).
 
-After CMake refreshes its target list, the direct target is also available:
-
-```bash
-make px4_sitl gz_x500_depthlight_disaster_baylands
-```
-
-See [`simulation/worlds/README.md`](../simulation/worlds/README.md) for full setup and usage details.
+> **Run procedure:** loading `worlds/rescue.sdf` into PX4 SITL/Gazebo (install path +
+> `PX4_GZ_WORLD`/resource-path setup) is **not yet documented** — to be written up by the world's
+> author. The earlier `disaster_baylands` world and the empty `simulation/models/*` placeholders
+> were removed once `rescue` superseded them.
 
 ---
 

@@ -37,38 +37,24 @@ ros2 topic list  # After starting a simulation, /clock and /world/* topics shoul
 
 ## World Files
 
-Simulation world files for this project are stored in:
-
-```
-simulation/worlds/
-```
-
-The main rescue scenario world file is:
-
-```
-simulation/worlds/earthquake_rescue_world.sdf
-```
-
-> This file is a placeholder. The full world will be developed during the simulation integration phase.
+The canonical Gazebo world is **`worlds/rescue.sdf`** (custom post-disaster rescue scene on the
+project's WGS-84 datum). See [`../docs/simulation_workflow.md`](../docs/simulation_workflow.md) for
+details. Worlds reference their models via `model://` URIs resolved through Gazebo's resource path
+(the repo root is on `GZ_SIM_RESOURCE_PATH`, so `model://<name>` → `models/<name>/`).
 
 ---
 
 ## Model Files
 
-Custom Gazebo models for this project are stored in:
+Gazebo models live in the top-level **`models/`** directory — textured mesh models used by
+`worlds/rescue.sdf`:
 
 ```
-simulation/models/
+models/
+├── collapsed_house/  collapsed_fire_station/  collapsed_industrial/   # structures
+├── person_standing/  person_walking/                                  # survivors
+└── oak_tree/  pine_tree/  construction_barrel/                        # clutter / obstacles
 ```
-
-Planned models:
-
-| Model | Path |
-|---|---|
-| Survivor marker | `simulation/models/survivor_marker/` |
-| Collapsed building | `simulation/models/collapsed_building/` |
-| Obstacle blocks | `simulation/models/obstacle_blocks/` |
-| Landing pad | `simulation/models/landing_pad/` |
 
 ---
 
