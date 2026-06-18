@@ -367,7 +367,7 @@ e_w, re_w, rk_w, st_w = elapsed[m60], raw_err[m60], rtk_err[m60], status[m60]
 fig, (ax1, ax2) = plt.subplots(
     2, 1, figsize=(13, 7),
     gridspec_kw={'height_ratios': [5, 1], 'hspace': 0.08}, sharex=True)
-fig.subplots_adjust(left=0.09, right=0.97, top=0.88, bottom=0.10)
+fig.subplots_adjust(left=0.09, right=0.85, top=0.88, bottom=0.15)
 
 shade_status(ax1, e_w, st_w, alpha=0.12)
 ax1.plot(e_w, re_w, color=C_RAW, lw=1.8, alpha=0.9, marker='o', ms=2.5,
@@ -375,12 +375,17 @@ ax1.plot(e_w, re_w, color=C_RAW, lw=1.8, alpha=0.9, marker='o', ms=2.5,
 ax1.plot(e_w, rk_w, color=C_RTK, lw=1.8, alpha=0.9, marker='s', ms=2.5,
          markevery=8, label='RTK-corrected error')
 
-# Per-status noise-spec reference lines. They are labelled in the legend (not
-# inline) because the raw-error trace fills the upper band and inline text
-# collided with it.
+# Per-status noise-spec reference lines, labelled just OUTSIDE the right edge
+# (blended transform: x in axes fraction, y in data) so the labels never cross
+# the raw-error trace that fills the plot interior.
 ax1.axhline(1.50, color=STATUS_COLORS['GNSS_ONLY'], ls=':', lw=1.1, alpha=0.7)
 ax1.axhline(0.25, color=STATUS_COLORS['RTK_FLOAT'], ls=':', lw=1.1, alpha=0.7)
 ax1.axhline(0.03, color=STATUS_COLORS['RTK_FIXED'], ls=':', lw=1.1, alpha=0.7)
+_spec_tr = ax1.get_yaxis_transform()
+ax1.text(1.015, 1.50, 'GNSS spec\n±1.50 m', transform=_spec_tr, color=STATUS_COLORS['GNSS_ONLY'],
+         fontsize=8, va='center', ha='left', fontweight='bold', clip_on=False)
+ax1.text(1.015, 0.25, 'Float spec\n±0.25 m', transform=_spec_tr, color=STATUS_COLORS['RTK_FLOAT'],
+         fontsize=8, va='center', ha='left', fontweight='bold', clip_on=False)
 
 y_top_c = max(float(rk_w.max()), float(re_w.max()), 8.0) * 1.12
 ax1.set_ylim(0, y_top_c)
@@ -394,7 +399,9 @@ transitions = [
 label_y = y_top_c * 0.965
 for t_tr, lbl in transitions:
     ax1.axvline(t_tr, color='#7F8C8D', ls='--', lw=1.0, zorder=1)
-    ha, xoff = ('right', t_tr - 0.6) if t_tr == 50.0 else ('left', t_tr + 0.6)
+    # Send the t=45 'Correction lost' label LEFT (into the clear RTK Fixed band)
+    # and the t=50 'Recovered' label RIGHT, so the two never overlap.
+    ha, xoff = ('right', t_tr - 0.6) if t_tr == 45.0 else ('left', t_tr + 0.6)
     ax1.text(xoff, label_y, lbl, fontsize=7.8, color='#333333', va='top', ha=ha,
              bbox=dict(boxstyle='round,pad=0.26', facecolor='white',
                        alpha=0.9, edgecolor='#BBBBBB', lw=0.7))
@@ -406,16 +413,12 @@ ax1.set_title(
     'RTK Initialization Sequence — Convergence and Correction-Loss Recovery\n'
     'Level 2  |  Stationary, pre-flight (t < 50 s)  |  Transition timing is scripted '
     '(state-machine demonstration, not real ambiguity resolution)', pad=10)
-# Single key (signals + noise-spec lines) with a solid background so it reads
-# cleanly over the raw-error spikes. Status bands are labelled inline in the strip.
-_leg = ax1.legend(
-    handles=[Line2D([0],[0], color=C_RAW, lw=1.8, marker='o', ms=4, label='Raw GNSS error'),
-             Line2D([0],[0], color=C_RTK, lw=1.8, marker='s', ms=4, label='RTK-corrected error'),
-             Line2D([0],[0], color=STATUS_COLORS['GNSS_ONLY'], ls=':', lw=1.2, label='GNSS Only spec (±1.50 m)'),
-             Line2D([0],[0], color=STATUS_COLORS['RTK_FLOAT'], ls=':', lw=1.2, label='RTK Float spec (±0.25 m)'),
-             Line2D([0],[0], color=STATUS_COLORS['RTK_FIXED'], ls=':', lw=1.2, label='RTK Fixed spec (±0.03 m)')],
-    loc='upper right', bbox_to_anchor=(0.998, 0.998), fontsize=8.5, framealpha=1.0)
-_leg.set_zorder(20)
+# Raw/RTK key placed BELOW the status strip so it never covers the transition
+# labels at the top of the plot. (Spec lines are labelled at the right edge.)
+fig.legend(handles=[Line2D([0],[0], color=C_RAW, lw=1.8, marker='o', ms=4, label='Raw GNSS error'),
+                    Line2D([0],[0], color=C_RTK, lw=1.8, marker='s', ms=4, label='RTK-corrected error')],
+           loc='lower center', bbox_to_anchor=(0.47, 0.005), ncol=2, fontsize=9.5,
+           framealpha=0.95, edgecolor='#CCCCCC')
 panel_label(ax1, 'A', dx=-0.07, dy=1.02)
 
 for s in ['GNSS_ONLY', 'RTK_FLOAT', 'RTK_FIXED', 'CORRECTION_LOST']:
