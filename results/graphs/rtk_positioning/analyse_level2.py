@@ -1,15 +1,41 @@
 """
-Level 2 RTK Positioning — Analysis and Visualisation
-=====================================================
+Level 2 RTK Positioning — Analysis and Visualisation (segmented reanalysis)
+===========================================================================
 Generates six publication-quality figures from the Level 2 PX4/Gazebo
 simulation CSV log and the QGC ULog flight record.
 
+METHODOLOGICAL NOTE — why this analysis is segmented
+----------------------------------------------------
+The Level 2 logger ran for 1028 s, but the drone only left the ground at
+t = 497 s and flew its autonomous waypoint mission at t = 785-948 s. The
+RTK correction state machine (driven by `rtcm_correction_simulator_node`)
+runs on its own clock from t = 0, so the GNSS->Float->Fixed convergence
+(0-15 s) and the injected correction-loss event (45-50 s) both occur while
+the vehicle is stationary on the ground, ~7 min before take-off.
+
+Reporting a single blended "mission" statistic over the whole log therefore
+fuses two physically distinct experiments. This script keeps them separate:
+
+  INIT    (t < 50 s, stationary)  -> RTK initialization + correction-loss
+                                      recovery (a state-machine demonstration;
+                                      transition timing is SCRIPTED, see
+                                      docs/simulation_assumptions.md).
+  FLIGHT  (airborne, ~497-986 s)  -> the in-flight positioning accuracy
+                                      result. 100 % RTK_FIXED throughout.
+  MISSION (horizontal flight, ~785-948 s) -> the QGC waypoint leg; aligns
+                                      with the 166 s ULog record used for
+                                      cross-validation.
+
+Headline result is the FLIGHT accuracy (cm-level, RTK Fixed), NOT the
+whole-log mean. In-flight resilience to mid-mission correction loss is
+delegated to Level 3 by design.
+
 Figures produced (saved to level2/):
-  l2_error_over_time.png      — Full 1028 s error time series (4 status phases)
-  l2_rtk_convergence.png      — First 60 s: convergence + CORRECTION_LOST event
-  l2_error_distribution.png   — Error distribution: raw GNSS vs RTK-corrected
-  l2_trajectory.png           — 2D top-down UAV trajectory (208 × 214 m area)
-  l2_accuracy_summary.png     — Status pie, phase error bars, improvement summary
+  l2_error_over_time.png      — Full session, INIT vs FLIGHT phases demarcated
+  l2_rtk_convergence.png      — INIT sequence: convergence + loss recovery (stationary)
+  l2_error_distribution.png   — In-flight error distribution: raw GNSS vs RTK
+  l2_trajectory.png           — 2D flight trajectory (~210 x 215 m area)
+  l2_accuracy_summary.png     — Error by segment, in-flight fix status, improvement
   l2_qgc_crossval.png         — QGC ULog cross-validation and 3-way accuracy comparison
 
 Usage:
@@ -64,11 +90,48 @@ rtk_lon = np.array([float(r['rtk_lon'])      if r['rtk_lon'].strip()      else n
 DURATION = elapsed[-1]
 N        = len(rows)
 
-raw_mean = float(np.mean(raw_err))
-rtk_mean = float(np.mean(rtk_err))
-IMP_PCT  = (raw_mean - rtk_mean) / raw_mean * 100   # 96.7 %
+# ── Segment masks (derived from the data, not hard-coded) ────────────────────
+# FLIGHT  : airborne window — first to last sample with altitude > 2 m.
+# MISSION : horizontal waypoint leg — horizontal displacement > 2 m from home.
+# INIT    : scripted RTK initialization window (convergence + loss event),
+#           which all occurs in the first 50 s while stationary on the ground.
+ALT_THRESH   = 2.0
+HORIZ_THRESH = 2.0
+INIT_END     = 50.0          # scripted convergence (0-15 s) + loss event (45-50 s)
 
-# ENU conversion (base station from simulation config)
+horiz   = np.sqrt(gt_x**2 + gt_y**2)
+air_idx = np.where(gt_z > ALT_THRESH)[0]
+T_TAKEOFF = float(elapsed[air_idx[0]])
+T_LANDING = float(elapsed[air_idx[-1]])
+
+m_init    = elapsed < INIT_END
+m_flight  = (elapsed >= T_TAKEOFF) & (elapsed <= T_LANDING)
+m_mission = horiz > HORIZ_THRESH
+m_idle_fixed = (elapsed >= INIT_END) & (elapsed < T_TAKEOFF) & (status == 'RTK_FIXED')
+
+T_MISSION_0 = float(elapsed[m_mission][0])
+T_MISSION_1 = float(elapsed[m_mission][-1])
+
+# ── Headline (FLIGHT) statistics ─────────────────────────────────────────────
+raw_flight = raw_err[m_flight]
+rtk_flight = rtk_err[m_flight]
+raw_mean   = float(np.mean(raw_flight))             # in-flight raw GNSS
+rtk_mean   = float(np.mean(rtk_flight))             # in-flight RTK (HEADLINE)
+IMP_PCT    = (raw_mean - rtk_mean) / raw_mean * 100  # in-flight improvement (~98 %)
+flight_fixed_pct = 100.0 * np.mean(status[m_flight] == 'RTK_FIXED')
+
+# Whole-log mean retained ONLY for explicit comparison / disclosure
+rtk_mean_wholelog = float(np.mean(rtk_err))
+
+print(f'[analyse_level2] take-off t={T_TAKEOFF:.0f}s  landing t={T_LANDING:.0f}s  '
+      f'mission t={T_MISSION_0:.0f}-{T_MISSION_1:.0f}s')
+print(f'[analyse_level2] IN-FLIGHT  raw={raw_mean:.3f} m  RTK={rtk_mean:.4f} m  '
+      f'improvement={IMP_PCT:.1f}%  RTK_FIXED={flight_fixed_pct:.1f}%')
+print(f'[analyse_level2] (whole-log RTK mean for reference only = {rtk_mean_wholelog:.4f} m)')
+
+# ENU conversion (round-trips through the simulation base station; the forward
+# ENU->lat/lon and this inverse cancel, so raw_x/rtk_x share the ground-truth
+# ENU frame regardless of the base coordinate — see simulation_assumptions.md).
 BASE_LAT      = 39.981000
 BASE_LON      = 116.344000
 M_PER_DEG_LAT = 111320.0
@@ -87,14 +150,13 @@ gt_d    = next(d for d in ulog.data_list if d.name == 'vehicle_global_position_g
 ul_gps_t   = gps_d.data['timestamp'] / 1e6
 ul_gps_lat = gps_d.data['latitude_deg']
 ul_gps_lon = gps_d.data['longitude_deg']
-ul_gps_eph = gps_d.data['eph']          # reported horizontal accuracy estimate
+ul_gps_eph = gps_d.data['eph']          # reported horizontal accuracy estimate (1-sigma, m)
 
 ul_gt_t    = gt_d.data['timestamp'] / 1e6
 ul_gt_lat  = gt_d.data['lat']
 ul_gt_lon  = gt_d.data['lon']
 ul_gt_alt  = gt_d.data['alt']
 
-# Convert ULog positions to ENU (origin = first GT point)
 UL_BASE_LAT = float(ul_gt_lat[0])
 UL_BASE_LON = float(ul_gt_lon[0])
 UL_M_LON    = 111320.0 * math.cos(math.radians(UL_BASE_LAT))
@@ -104,57 +166,76 @@ ul_gt_y  = (ul_gt_lat - UL_BASE_LAT) * 111320.0
 ul_gps_x = (ul_gps_lon - UL_BASE_LON) * UL_M_LON
 ul_gps_y = (ul_gps_lat - UL_BASE_LAT) * 111320.0
 
-# Measured PX4 GPS error vs ground truth (interpolated)
 gt_ix = interp1d(ul_gt_t, ul_gt_x, bounds_error=False, fill_value=np.nan)
 gt_iy = interp1d(ul_gt_t, ul_gt_y, bounds_error=False, fill_value=np.nan)
 px4_err_3d = np.sqrt((ul_gps_x - gt_ix(ul_gps_t))**2 +
                      (ul_gps_y - gt_iy(ul_gps_t))**2)
 px4_err_mean = float(np.nanmean(px4_err_3d))
-px4_eph_mean = float(np.mean(ul_gps_eph))   # 0.90 m reported
+px4_eph_mean = float(np.mean(ul_gps_eph))
 
-# Per-status masks
-m_gnss = status == 'GNSS_ONLY'
+# Per-status masks (used for the INIT figures)
+m_gnss  = status == 'GNSS_ONLY'
 m_float = status == 'RTK_FLOAT'
 m_fixed = status == 'RTK_FIXED'
 m_lost  = status == 'CORRECTION_LOST'
 
-fixed_raw = raw_err[m_fixed]
-fixed_rtk = rtk_err[m_fixed]
-
-# CORRECTION_LOST peak
 cl_t   = elapsed[m_lost]
 cl_rtk = rtk_err[m_lost]
-peak_t = float(cl_t[np.argmax(cl_rtk)])
-peak_v = float(cl_rtk.max())
+peak_t = float(cl_t[np.argmax(cl_rtk)]) if len(cl_t) else np.nan
+peak_v = float(cl_rtk.max())            if len(cl_rtk) else np.nan
 
-# ── Colour palette ────────────────────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════════════════
+# Publication style — Okabe-Ito colourblind-safe palette, baked in for
+# reproducibility (no external style dependency). Generous sizing is retained
+# deliberately: this is a report/presentation figure set, so detail visibility
+# is prioritised over journal single-column compactness.
+# ═══════════════════════════════════════════════════════════════════════════
+# Okabe-Ito semantic assignments (distinguishable under all CVD types + grayscale)
+OK_ORANGE   = '#E69F00'
+OK_SKYBLUE  = '#56B4E9'
+OK_GREEN    = '#009E73'
+OK_YELLOW   = '#F0E442'
+OK_BLUE     = '#0072B2'
+OK_VERMIL   = '#D55E00'
+OK_PURPLE   = '#CC79A7'
+OK_BLACK    = '#000000'
+
+C_RAW = OK_VERMIL    # raw / uncorrected GNSS error
+C_RTK = OK_BLUE      # RTK-corrected error (the study subject)
+C_GT  = '#1C2833'    # ground-truth path (near-black)
+
 STATUS_COLORS = {
-    'GNSS_ONLY':       '#E67E22',
-    'RTK_FLOAT':       '#F1C40F',
-    'RTK_FIXED':       '#27AE60',
-    'CORRECTION_LOST': '#8E44AD',
+    'GNSS_ONLY':       OK_VERMIL,    # standard GNSS  (worst)
+    'RTK_FLOAT':       OK_ORANGE,    # decimetre, partial
+    'RTK_FIXED':       OK_GREEN,     # centimetre     (best)
+    'CORRECTION_LOST': OK_PURPLE,    # link lost      (alarm)
 }
 STATUS_LABELS = {
-    'GNSS_ONLY':       'GNSS Only  (±1.50 m spec)',
-    'RTK_FLOAT':       'RTK Float  (±0.25 m spec)',
-    'RTK_FIXED':       'RTK Fixed  (±0.03 m spec)',
-    'CORRECTION_LOST': 'Correction Lost',
+    'GNSS_ONLY':       'GNSS Only  (metre-level, σ≈1.50 m)',
+    'RTK_FLOAT':       'RTK Float  (decimetre, σ≈0.25 m)',
+    'RTK_FIXED':       'RTK Fixed  (centimetre, σ≈0.03 m)',
+    'CORRECTION_LOST': 'Correction Lost  (degraded, σ≈2.50 m)',
 }
-C_RAW = '#C0392B'
-C_RTK = '#2471A3'
-C_GT  = '#1C2833'
+# Phase-region tints for the full-session timeline
+REGION_INIT   = '#FBE9E7'   # pale vermillion  — initialization (stationary)
+REGION_IDLE   = '#ECEFF1'   # pale grey        — pre-flight hold (stationary)
+REGION_FLIGHT = '#E8F5E9'   # pale green       — autonomous flight
 
-# ── Global style ──────────────────────────────────────────────────────────────
 plt.rcParams.update({
-    'font.family':        'DejaVu Sans',
+    'font.family':        'sans-serif',
+    'font.sans-serif':    ['Arial', 'Helvetica', 'DejaVu Sans'],
     'font.size':          11,
     'axes.titlesize':     12,
     'axes.titleweight':   'bold',
     'axes.labelsize':     11,
+    'axes.linewidth':     0.8,
     'axes.spines.top':    False,
     'axes.spines.right':  False,
+    'axes.axisbelow':     True,
     'xtick.labelsize':    10,
     'ytick.labelsize':    10,
+    'xtick.direction':    'out',
+    'ytick.direction':    'out',
     'legend.fontsize':    9.5,
     'legend.framealpha':  0.93,
     'legend.edgecolor':   '#CCCCCC',
@@ -162,10 +243,16 @@ plt.rcParams.update({
     'savefig.dpi':        300,
     'savefig.bbox':       'tight',
     'savefig.pad_inches': 0.18,
+    'savefig.facecolor':  'white',
 })
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
-def shade_status(ax, t, st, alpha=0.09):
+def panel_label(ax, letter, dx=-0.12, dy=1.04):
+    """Bold A/B/C panel label in axes-fraction coordinates."""
+    ax.text(dx, dy, letter, transform=ax.transAxes,
+            fontsize=13, fontweight='bold', va='top', ha='left')
+
+def shade_status(ax, t, st, alpha=0.10):
     i = 0
     while i < len(st):
         s = st[i]; j = i
@@ -176,82 +263,92 @@ def shade_status(ax, t, st, alpha=0.09):
         i = j
 
 def status_patch_handles(present):
-    return [mpatches.Patch(facecolor=STATUS_COLORS[s], alpha=0.55,
+    return [mpatches.Patch(facecolor=STATUS_COLORS[s], alpha=0.65,
                            edgecolor='none', label=STATUS_LABELS[s])
             for s in STATUS_COLORS if s in present]
 
+def smooth(arr, w=30):
+    return np.convolve(arr, np.ones(w) / w, mode='same')
+
 # ═══════════════════════════════════════════════════════════════════════════
-# Figure 1 — Positioning Error Over Time
+# Figure 1 — Full-session timeline: INITIALIZATION vs FLIGHT (nothing hidden)
 # ═══════════════════════════════════════════════════════════════════════════
 print('[1/6] Generating: l2_error_over_time.png')
 
-fig, ax = plt.subplots(figsize=(14, 5.8))
-fig.subplots_adjust(bottom=0.24, top=0.88, left=0.08, right=0.97)
+fig, ax = plt.subplots(figsize=(14, 6.0))
+fig.subplots_adjust(bottom=0.26, top=0.86, left=0.08, right=0.78)
 
-shade_status(ax, elapsed, status, alpha=0.09)
+# Phase regions across the WHOLE session — transparent about what is what
+ax.axvspan(0, INIT_END,            color=REGION_INIT,   alpha=0.9, lw=0, zorder=0)
+ax.axvspan(INIT_END, T_TAKEOFF,    color=REGION_IDLE,   alpha=0.9, lw=0, zorder=0)
+ax.axvspan(T_TAKEOFF, T_LANDING,   color=REGION_FLIGHT, alpha=0.9, lw=0, zorder=0)
+ax.axvspan(T_LANDING, DURATION,    color=REGION_IDLE,   alpha=0.9, lw=0, zorder=0)
 
-W = 30
-raw_sm = np.convolve(raw_err, np.ones(W)/W, mode='same')
-rtk_sm = np.convolve(rtk_err, np.ones(W)/W, mode='same')
+# Log y-axis so the cm-level flight error AND the metre-level dropout are BOTH
+# visible — a linear axis crushes the 0.047 m flight result onto the x-axis.
+ax.set_yscale('log')
 
-ax.plot(elapsed, raw_err, color=C_RAW, lw=0.5, alpha=0.15, zorder=2)
-ax.plot(elapsed, rtk_err, color=C_RTK, lw=0.5, alpha=0.15, zorder=2)
-ax.plot(elapsed, raw_sm,  color=C_RAW, lw=2.0, alpha=0.95, zorder=3,
-        label='Raw GNSS Error (3 s mean)')
-ax.plot(elapsed, rtk_sm,  color=C_RTK, lw=2.0, alpha=0.95, zorder=3,
-        label='RTK-Corrected Error (3 s mean)')
+ax.plot(elapsed, raw_err, color=C_RAW, lw=0.5, alpha=0.18, zorder=2)
+ax.plot(elapsed, rtk_err, color=C_RTK, lw=0.5, alpha=0.18, zorder=2)
+ax.plot(elapsed, smooth(raw_err), color=C_RAW, lw=2.0, alpha=0.95, zorder=4,
+        label='Raw GNSS error (3 s mean)')
+ax.plot(elapsed, smooth(rtk_err), color=C_RTK, lw=2.2, alpha=0.95, zorder=5,
+        label='RTK-corrected error (3 s mean)')
 
-# Mean reference lines
-ax.axhline(raw_mean, color=C_RAW, ls=':', lw=1.3, alpha=0.70, zorder=1)
-ax.axhline(rtk_mean, color=C_RTK, ls=':', lw=1.3, alpha=0.70, zorder=1)
+ax.set_ylim(0.01, max(float(raw_err.max()), 3.0) * 1.4)
 
-# Spec reference lines
-ax.axhline(1.50, color=STATUS_COLORS['GNSS_ONLY'],       ls='--', lw=0.9, alpha=0.50, zorder=1)
-ax.axhline(0.25, color=STATUS_COLORS['RTK_FLOAT'],        ls='--', lw=0.9, alpha=0.50, zorder=1)
-ax.axhline(0.03, color=STATUS_COLORS['RTK_FIXED'],        ls='--', lw=0.9, alpha=0.50, zorder=1)
+# Phase boundary markers
+ax.axvline(T_TAKEOFF, color=OK_GREEN, ls='--', lw=1.4, alpha=0.9, zorder=6)
+ax.axvline(T_LANDING, color=OK_VERMIL, ls='--', lw=1.4, alpha=0.9, zorder=6)
 
-# CORRECTION_LOST spike annotation — arrow pointing to the peak
-y_max = max(raw_err.max(), rtk_err.max()) * 1.12
-ax.set_ylim(0, y_max)
-ax.annotate(
-    f'Correction Lost\nt = {peak_t:.0f} s\nErr = {peak_v:.2f} m',
-    xy=(peak_t, peak_v),
-    xytext=(peak_t + 40, peak_v * 0.80),
-    fontsize=8.5, color=STATUS_COLORS['CORRECTION_LOST'],
-    ha='left', va='center',
-    arrowprops=dict(arrowstyle='->', color=STATUS_COLORS['CORRECTION_LOST'],
-                    lw=1.2, connectionstyle='arc3,rad=-0.2'),
-    bbox=dict(boxstyle='round,pad=0.32', facecolor='white',
-              edgecolor=STATUS_COLORS['CORRECTION_LOST'], alpha=0.90, linewidth=0.9))
+# Engineering reference lines (RTK Fixed spec + GNSS spec), dotted, neutral
+ax.axhline(0.03, color=OK_GREEN,  ls=':', lw=1.2, alpha=0.7, zorder=3)
+ax.axhline(1.50, color=OK_VERMIL, ls=':', lw=1.2, alpha=0.5, zorder=3)
+
+# Phase region labels along the top
+ytxt = ax.get_ylim()[1] * 0.55
+ax.text(INIT_END/2, ytxt, 'INITIALIZATION\n(stationary, scripted)',
+        ha='center', va='center', fontsize=8.0, color=OK_VERMIL, fontweight='bold')
+ax.text((INIT_END+T_TAKEOFF)/2, ytxt, 'Pre-flight hold\n(stationary)',
+        ha='center', va='center', fontsize=8.0, color='#607D8B', fontweight='bold')
+ax.text((T_TAKEOFF+T_LANDING)/2, ytxt, 'AUTONOMOUS FLIGHT',
+        ha='center', va='center', fontsize=9.0, color=OK_GREEN, fontweight='bold')
+ax.annotate('Take-off\nt = %.0f s' % T_TAKEOFF, xy=(T_TAKEOFF, 0.03),
+            xytext=(T_TAKEOFF-150, 0.013), fontsize=8.0, color=OK_GREEN, ha='center',
+            arrowprops=dict(arrowstyle='->', color=OK_GREEN, lw=1.0))
+
+# Correction-loss event annotation (explicitly tagged as INIT)
+if np.isfinite(peak_t):
+    # Placed in the open band between the RTK (~0.05 m) and raw (~2.4 m) lines,
+    # clear of the phase-region labels at the top and the take-off marker below.
+    ax.annotate('Correction-loss test\n(initialization, t≈%.0f s)' % peak_t,
+                xy=(peak_t, peak_v), xytext=(165, 0.32),
+                fontsize=8.0, color=STATUS_COLORS['CORRECTION_LOST'], ha='left', va='center',
+                arrowprops=dict(arrowstyle='->', color=STATUS_COLORS['CORRECTION_LOST'],
+                                lw=1.1, connectionstyle='arc3,rad=0.2'),
+                bbox=dict(boxstyle='round,pad=0.3', facecolor='white',
+                          edgecolor=STATUS_COLORS['CORRECTION_LOST'], alpha=0.95, lw=0.8),
+                zorder=10)
 
 ax.set_xlim(0, DURATION)
-ax.set_xlabel('Elapsed Time (s)', labelpad=6)
-ax.set_ylabel('3D Positioning Error (m)')
+ax.set_xlabel('Elapsed time (s)', labelpad=6)
+ax.set_ylabel('3D positioning error (m, log scale)')
 ax.set_title(
-    'RTK Positioning Error Over Time\n'
-    'Level 2 — PX4 / Gazebo Simulation  |  QGC Autonomous Mission  |  208 × 214 m Coverage',
+    'Positioning Error Across the Full Level 2 Session\n'
+    'PX4 / Gazebo  |  Initialization (stationary) and autonomous flight shown separately',
     pad=8)
-ax.grid(True, ls='--', lw=0.4, alpha=0.45)
+ax.grid(True, which='both', ls='--', lw=0.4, alpha=0.4)
+ax.legend(loc='upper left', bbox_to_anchor=(1.01, 1.0), fontsize=9.0,
+          title='Signal', title_fontsize=9.5)
 
-# Single combined legend — upper right
-data_handles = [
-    Line2D([0],[0], color=C_RAW, lw=2.0, label='Raw GNSS Error (3 s mean)'),
-    Line2D([0],[0], color=C_RTK, lw=2.0, label='RTK-Corrected Error (3 s mean)'),
-    Line2D([0],[0], color='#555555', ls=':', lw=1.3, alpha=0.8,
-           label=f'Overall mean  (raw {raw_mean:.3f} m  |  RTK {rtk_mean:.3f} m)'),
-]
-ax.legend(handles=data_handles + status_patch_handles(set(status)),
-          loc='upper right', fontsize=9.0, framealpha=0.93,
-          title='Signal  /  RTK Fix Status', title_fontsize=9.0)
-
-# Stats box in figure bottom margin — zero overlap with data
 stats_text = (
-    f'Samples: {N:,}   |   Duration: {DURATION:.0f} s   |   '
-    f'Raw GNSS: μ = {raw_mean:.3f} m, σ = {np.std(raw_err):.3f} m   |   '
-    f'RTK-Corrected: μ = {rtk_mean:.3f} m, σ = {np.std(rtk_err):.3f} m   |   '
-    f'Accuracy improvement: {IMP_PCT:.1f}%'
+    f'IN-FLIGHT result (t = {T_TAKEOFF:.0f}–{T_LANDING:.0f} s, n = {m_flight.sum():,}):   '
+    f'Raw GNSS μ = {raw_mean:.3f} m   |   RTK μ = {rtk_mean:.3f} m '
+    f'({rtk_mean*100:.1f} cm)   |   improvement {IMP_PCT:.1f}%   |   RTK_FIXED {flight_fixed_pct:.0f}% of flight\n'
+    f'Convergence and the correction-loss event occur during INITIALIZATION (t < {INIT_END:.0f} s, '
+    f'stationary, scripted timing).   Whole-log mean ({rtk_mean_wholelog:.3f} m) is NOT used as the result.'
 )
-fig.text(0.08, 0.04, stats_text, fontsize=8.8, va='bottom', ha='left',
+fig.text(0.08, 0.045, stats_text, fontsize=8.6, va='bottom', ha='left',
          bbox=dict(boxstyle='round,pad=0.45', facecolor='#F8F9FA',
                    alpha=0.95, edgecolor='#CCCCCC'))
 
@@ -259,113 +356,95 @@ plt.savefig(os.path.join(OUT_DIR, 'l2_error_over_time.png'))
 plt.close()
 
 # ═══════════════════════════════════════════════════════════════════════════
-# Figure 2 — RTK Convergence (first 60 s)
+# Figure 2 — RTK INITIALIZATION sequence (first 60 s, stationary)
 # ═══════════════════════════════════════════════════════════════════════════
 print('[2/6] Generating: l2_rtk_convergence.png')
 
-WINDOW  = 60.0
-m60     = elapsed <= WINDOW
-e_w     = elapsed[m60]
-re_w    = raw_err[m60]
-rk_w    = rtk_err[m60]
-st_w    = status[m60]
+WINDOW = 60.0
+m60    = elapsed <= WINDOW
+e_w, re_w, rk_w, st_w = elapsed[m60], raw_err[m60], rtk_err[m60], status[m60]
 
 fig, (ax1, ax2) = plt.subplots(
     2, 1, figsize=(13, 7),
-    gridspec_kw={'height_ratios': [5, 1], 'hspace': 0.06},
-    sharex=True)
-fig.subplots_adjust(left=0.09, right=0.97, top=0.90, bottom=0.10)
+    gridspec_kw={'height_ratios': [5, 1], 'hspace': 0.08}, sharex=True)
+fig.subplots_adjust(left=0.09, right=0.97, top=0.88, bottom=0.10)
 
-# ── Top panel ──
-shade_status(ax1, e_w, st_w, alpha=0.11)
-ax1.plot(e_w, re_w, color=C_RAW, lw=1.6, alpha=0.88, label='Raw GNSS Error')
-ax1.plot(e_w, rk_w, color=C_RTK, lw=1.6, alpha=0.88, label='RTK-Corrected Error')
+shade_status(ax1, e_w, st_w, alpha=0.12)
+ax1.plot(e_w, re_w, color=C_RAW, lw=1.8, alpha=0.9, marker='o', ms=2.5,
+         markevery=8, label='Raw GNSS error')
+ax1.plot(e_w, rk_w, color=C_RTK, lw=1.8, alpha=0.9, marker='s', ms=2.5,
+         markevery=8, label='RTK-corrected error')
 
-ax1.axhline(1.50, color=STATUS_COLORS['GNSS_ONLY'], ls='--', lw=1.0, alpha=0.65)
-ax1.axhline(0.25, color=STATUS_COLORS['RTK_FLOAT'],  ls='--', lw=1.0, alpha=0.65)
-ax1.axhline(0.03, color=STATUS_COLORS['RTK_FIXED'],  ls='--', lw=1.0, alpha=0.65)
+# Per-status noise-spec reference lines. They are labelled in the legend (not
+# inline) because the raw-error trace fills the upper band and inline text
+# collided with it.
+ax1.axhline(1.50, color=STATUS_COLORS['GNSS_ONLY'], ls=':', lw=1.1, alpha=0.7)
+ax1.axhline(0.25, color=STATUS_COLORS['RTK_FLOAT'], ls=':', lw=1.1, alpha=0.7)
+ax1.axhline(0.03, color=STATUS_COLORS['RTK_FIXED'], ls=':', lw=1.1, alpha=0.7)
 
-ax1.text(59.2, 1.55, '± 1.50 m', color=STATUS_COLORS['GNSS_ONLY'],
-         fontsize=8.0, ha='right', va='bottom')
-ax1.text(59.2, 0.28, '± 0.25 m', color=STATUS_COLORS['RTK_FLOAT'],
-         fontsize=8.0, ha='right', va='bottom')
-
-y_top_c = max(float(rk_w.max()), float(re_w.max()), 8.0) * 1.10
+y_top_c = max(float(rk_w.max()), float(re_w.max()), 8.0) * 1.12
 ax1.set_ylim(0, y_top_c)
 
-# Transition markers at all four phase changes
 transitions = [
     (5.0,  'GNSS Only → RTK Float\n(t = 5 s)'),
     (15.0, 'RTK Float → RTK Fixed\n(t = 15 s)'),
-    (45.0, 'RTK Fixed → Correction Lost\n(t = 45 s)'),
-    (50.0, 'Correction Lost → RTK Fixed\n(t = 50 s)'),
+    (45.0, 'Correction lost\n(t = 45 s)'),
+    (50.0, 'Recovered → RTK Fixed\n(t = 50 s)'),
 ]
-label_y = y_top_c * 0.97
+label_y = y_top_c * 0.965
 for t_tr, lbl in transitions:
-    ax1.axvline(t_tr, color='#7F8C8D', ls=':', lw=1.2, zorder=1)
-    ha = 'left'
-    xoff = t_tr + 0.5
-    # The t=50s label sits close to t=45s — shift it left
-    if t_tr == 50.0:
-        ha = 'right'
-        xoff = t_tr - 0.5
-    ax1.text(xoff, label_y, lbl,
-             fontsize=7.8, color='#333333', va='top', ha=ha,
+    ax1.axvline(t_tr, color='#7F8C8D', ls='--', lw=1.0, zorder=1)
+    ha, xoff = ('right', t_tr - 0.6) if t_tr == 50.0 else ('left', t_tr + 0.6)
+    ax1.text(xoff, label_y, lbl, fontsize=7.8, color='#333333', va='top', ha=ha,
              bbox=dict(boxstyle='round,pad=0.26', facecolor='white',
-                       alpha=0.88, edgecolor='#BBBBBB', linewidth=0.8))
+                       alpha=0.9, edgecolor='#BBBBBB', lw=0.7))
 
-ax1.set_ylabel('3D Positioning Error (m)')
+ax1.set_ylabel('3D positioning error (m)')
 ax1.set_xlim(0, WINDOW)
 ax1.grid(True, ls='--', lw=0.4, alpha=0.5)
 ax1.set_title(
-    'RTK Fix Convergence — First 60 Seconds\n'
-    'Level 2 PX4/Gazebo Simulation  |  Includes CORRECTION_LOST Event at t = 45 – 50 s',
-    pad=8)
+    'RTK Initialization Sequence — Convergence and Correction-Loss Recovery\n'
+    'Level 2  |  Stationary, pre-flight (t < 50 s)  |  Transition timing is scripted '
+    '(state-machine demonstration, not real ambiguity resolution)', pad=10)
+# Single key (signals + noise-spec lines) with a solid background so it reads
+# cleanly over the raw-error spikes. Status bands are labelled inline in the strip.
+_leg = ax1.legend(
+    handles=[Line2D([0],[0], color=C_RAW, lw=1.8, marker='o', ms=4, label='Raw GNSS error'),
+             Line2D([0],[0], color=C_RTK, lw=1.8, marker='s', ms=4, label='RTK-corrected error'),
+             Line2D([0],[0], color=STATUS_COLORS['GNSS_ONLY'], ls=':', lw=1.2, label='GNSS Only spec (±1.50 m)'),
+             Line2D([0],[0], color=STATUS_COLORS['RTK_FLOAT'], ls=':', lw=1.2, label='RTK Float spec (±0.25 m)'),
+             Line2D([0],[0], color=STATUS_COLORS['RTK_FIXED'], ls=':', lw=1.2, label='RTK Fixed spec (±0.03 m)')],
+    loc='upper right', bbox_to_anchor=(0.998, 0.998), fontsize=8.5, framealpha=1.0)
+_leg.set_zorder(20)
+panel_label(ax1, 'A', dx=-0.07, dy=1.02)
 
-data_h = [Line2D([0],[0], color=C_RAW, lw=1.6, label='Raw GNSS Error'),
-          Line2D([0],[0], color=C_RTK, lw=1.6, label='RTK-Corrected Error')]
-ax1.legend(handles=data_h + status_patch_handles(set(st_w)),
-           ncol=3, loc='upper left', fontsize=9.0, framealpha=0.93)
-
-# ── Bottom panel: status strip ──
 for s in ['GNSS_ONLY', 'RTK_FLOAT', 'RTK_FIXED', 'CORRECTION_LOST']:
-    ax2.fill_between(e_w, 0, 1, where=(st_w == s),
-                     color=STATUS_COLORS[s], alpha=0.88)
-
-# Text labels inside each band (skip CORRECTION_LOST — it is too narrow at 5 s)
-for s, txt, xc in [('GNSS_ONLY',  'GNSS Only',  2.5),
-                   ('RTK_FLOAT',  'RTK Float',  10.0),
-                   ('RTK_FIXED',  'RTK Fixed',  30.0),
-                   ('RTK_FIXED',  'RTK Fixed',  55.0)]:
-    ax2.text(xc, 0.5, txt, ha='center', va='center',
-             fontsize=8.0, fontweight='bold', color='white')
-# Small label for CORRECTION_LOST (narrow band)
-ax2.text(47.5, 0.5, 'Lost', ha='center', va='center',
-         fontsize=6.5, fontweight='bold', color='white')
-
-ax2.set_xlim(0, WINDOW)
-ax2.set_ylim(0, 1)
-ax2.set_yticks([])
-ax2.set_xlabel('Elapsed Time (s)')
+    ax2.fill_between(e_w, 0, 1, where=(st_w == s), color=STATUS_COLORS[s], alpha=0.9)
+for s, txt, xc in [('GNSS_ONLY', 'GNSS Only', 2.5), ('RTK_FLOAT', 'RTK Float', 10.0),
+                   ('RTK_FIXED', 'RTK Fixed', 30.0), ('RTK_FIXED', 'RTK Fixed', 55.0)]:
+    ax2.text(xc, 0.5, txt, ha='center', va='center', fontsize=8, fontweight='bold', color='white')
+ax2.text(47.5, 0.5, 'Lost', ha='center', va='center', fontsize=6.5, fontweight='bold', color='white')
+ax2.set_xlim(0, WINDOW); ax2.set_ylim(0, 1); ax2.set_yticks([])
+ax2.set_ylabel('Fix status', fontsize=9)
+ax2.set_xlabel('Elapsed time (s)')
 ax2.spines['left'].set_visible(False)
-ax2.tick_params(axis='x', bottom=True)
 
 plt.savefig(os.path.join(OUT_DIR, 'l2_rtk_convergence.png'))
 plt.close()
 
 # ═══════════════════════════════════════════════════════════════════════════
-# Figure 3 — Error Distribution
+# Figure 3 — In-flight error distribution (FLIGHT window)
 # ═══════════════════════════════════════════════════════════════════════════
 print('[3/6] Generating: l2_error_distribution.png')
 
 fig, (axL, axR) = plt.subplots(1, 2, figsize=(14, 5.5))
-fig.subplots_adjust(left=0.07, right=0.97, top=0.83, bottom=0.20, wspace=0.32)
+fig.subplots_adjust(left=0.07, right=0.97, top=0.82, bottom=0.22, wspace=0.30)
 fig.suptitle(
-    'Positioning Error Distribution — Raw GNSS vs RTK-Corrected\n'
-    'Level 2 PX4/Gazebo Simulation  |  Samples from RTK_FIXED Period Only',
-    fontsize=12, fontweight='bold', y=0.97)
+    'In-Flight Positioning Error Distribution — Raw GNSS vs RTK-Corrected\n'
+    f'Level 2  |  Autonomous flight only (t = {T_TAKEOFF:.0f}–{T_LANDING:.0f} s, '
+    f'100% RTK Fixed)',
+    fontsize=12, fontweight='bold', y=0.98)
 
-# Shared legend below both panels
 legend_handles_dist = [
     mpatches.Patch(color='#888888', alpha=0.30, label='Histogram (normalised density)'),
     Line2D([0],[0], color='#888888', lw=2.2, label='KDE fit'),
@@ -373,198 +452,148 @@ legend_handles_dist = [
     Line2D([0],[0], color='#888888', ls=':',  lw=1.8, label='Median'),
     Line2D([0],[0], color='#555555', ls='-.', lw=1.4, label='95th percentile'),
 ]
-fig.legend(handles=legend_handles_dist,
-           loc='upper center', bbox_to_anchor=(0.5, 0.08),
+fig.legend(handles=legend_handles_dist, loc='lower center', bbox_to_anchor=(0.5, 0.0),
            ncol=5, fontsize=9.5, framealpha=0.93, edgecolor='#CCCCCC')
 
-for ax, data, color, title, xmax, nbins in [
-    (axL, fixed_raw, C_RAW, 'Raw GNSS Positioning Error\n(RTK_FIXED period)', 8.0, 60),
-    (axR, fixed_rtk, C_RTK, 'RTK-Corrected Positioning Error\n(RTK_FIXED period)', 0.5, 50),
+for ax, data, color, title, xmax, nbins, lab in [
+    (axL, raw_flight, C_RAW, 'Raw GNSS positioning error\n(in-flight)', 8.0, 60, 'A'),
+    (axR, rtk_flight, C_RTK, 'RTK-corrected positioning error\n(in-flight, RTK Fixed)', 0.5, 50, 'B'),
 ]:
     bins = np.linspace(0, xmax, nbins)
-    ax.hist(data, bins=bins, color=color, alpha=0.28, density=True)
-
-    kde   = gaussian_kde(data, bw_method='scott')
+    ax.hist(data, bins=bins, color=color, alpha=0.30, density=True)
+    kde = gaussian_kde(data, bw_method='scott')
     x_kde = np.linspace(0, xmax, 800)
     ax.plot(x_kde, kde(x_kde), color=color, lw=2.2)
-
-    mean_v   = float(np.mean(data))
-    median_v = float(np.median(data))
-    p95_v    = float(np.percentile(data, 95))
-
+    mean_v, median_v, p95_v = float(np.mean(data)), float(np.median(data)), float(np.percentile(data, 95))
     ax.axvline(mean_v,   color=color,     ls='--', lw=1.8)
     ax.axvline(median_v, color=color,     ls=':',  lw=1.8)
     ax.axvline(p95_v,    color='#555555', ls='-.', lw=1.4)
-
-    ax.set_xlabel('3D Positioning Error (m)')
-    ax.set_ylabel('Probability Density')
+    ax.set_xlabel('3D positioning error (m)')
+    ax.set_ylabel('Probability density')
     ax.set_title(title, fontsize=11, fontweight='bold', pad=6)
-    ax.set_xlim(0, xmax)
-    ax.set_ylim(bottom=0)
+    ax.set_xlim(0, xmax); ax.set_ylim(bottom=0)
     ax.grid(True, ls='--', lw=0.4, alpha=0.5)
-
     stats_txt = (f'n = {len(data):,} samples\n'
                  f'Mean    = {mean_v:.4f} m\n'
+                 f'Median  = {median_v:.4f} m\n'
                  f'Std     = {float(np.std(data)):.4f} m\n'
                  f'Min     = {float(np.min(data)):.4f} m\n'
                  f'Max     = {float(np.max(data)):.4f} m\n'
                  f'P95     = {p95_v:.4f} m')
-
-    # Raw GNSS: data starts at 0.07 m → KDE near-zero at x=0 → upper-LEFT safe
-    # RTK: KDE peaks at x≈0.047 m, zero at x=0.25 m → upper-RIGHT safe
-    if ax is axL:
-        ax.text(0.03, 0.97, stats_txt, transform=ax.transAxes,
-                fontsize=8.8, va='top', ha='left',
-                bbox=dict(boxstyle='round,pad=0.42', facecolor='white',
-                          alpha=0.93, edgecolor='#CCCCCC'))
-    else:
-        ax.text(0.97, 0.97, stats_txt, transform=ax.transAxes,
-                fontsize=8.8, va='top', ha='right',
-                bbox=dict(boxstyle='round,pad=0.42', facecolor='white',
-                          alpha=0.93, edgecolor='#CCCCCC'))
+    pos = (0.97, 0.97) if ax is axR else (0.97, 0.97)
+    ax.text(pos[0], pos[1], stats_txt, transform=ax.transAxes, fontsize=8.8,
+            va='top', ha='right', family='monospace',
+            bbox=dict(boxstyle='round,pad=0.42', facecolor='white', alpha=0.93, edgecolor='#CCCCCC'))
+    panel_label(ax, lab)
 
 plt.savefig(os.path.join(OUT_DIR, 'l2_error_distribution.png'))
 plt.close()
 
 # ═══════════════════════════════════════════════════════════════════════════
-# Figure 4 — UAV Trajectory
+# Figure 4 — Flight trajectory
 # ═══════════════════════════════════════════════════════════════════════════
 print('[4/6] Generating: l2_trajectory.png')
 
 fig, ax = plt.subplots(figsize=(9, 9))
-fig.subplots_adjust(left=0.11, right=0.97, top=0.91, bottom=0.18)
+fig.subplots_adjust(left=0.11, right=0.97, top=0.90, bottom=0.18)
 
-step     = max(1, N // 1500)
-gps_mask = ~np.isnan(raw_x)
-rtk_mask = ~np.isnan(rtk_x)
+fly = m_flight
+step = max(1, fly.sum() // 1500)
+gps_mask = fly & ~np.isnan(raw_x)
+rtk_mask = fly & ~np.isnan(rtk_x)
 
 ax.scatter(raw_x[gps_mask][::step], raw_y[gps_mask][::step],
-           color=C_RAW, s=8, alpha=0.18, zorder=2)
+           color=C_RAW, s=10, alpha=0.18, zorder=2, label='Raw GNSS (μ = %.2f m)' % raw_mean)
 ax.scatter(rtk_x[rtk_mask][::step], rtk_y[rtk_mask][::step],
-           color=C_RTK, s=8, alpha=0.45, zorder=3)
-ax.plot(gt_x, gt_y, color=C_GT, lw=1.6, zorder=4)
+           color=C_RTK, s=10, alpha=0.5, zorder=3, label='RTK-corrected (μ = %.3f m)' % rtk_mean)
+ax.plot(gt_x[fly], gt_y[fly], color=C_GT, lw=1.8, zorder=4, label='Ground-truth path')
+ax.plot(gt_x[fly][0], gt_y[fly][0], 'o', color=OK_PURPLE, ms=11, zorder=5,
+        label='Home (take-off / land)')
 
-# Start marker
-ax.plot(gt_x[0], gt_y[0], 'o', color='#8E44AD', ms=9, zorder=5)
+bbox_e = gt_x[fly].max() - gt_x[fly].min()
+bbox_n = gt_y[fly].max() - gt_y[fly].min()
+max_r  = horiz[fly].max()
 
-# Home / end position label
-ax.text(gt_x[0] + 4, gt_y[0] + 3, 'Home\n(takeoff/land)',
-        fontsize=8.0, color='#8E44AD', va='bottom', ha='left')
-
-ax.set_xlabel('East (m)  [relative to base station]')
-ax.set_ylabel('North (m)  [relative to base station]')
+ax.set_xlabel('East (m)  [ENU, relative to home]')
+ax.set_ylabel('North (m)  [ENU, relative to home]')
 ax.set_title(
-    'UAV Flight Trajectory — Positioning Comparison\n'
-    'Level 2 PX4/Gazebo Simulation  |  Autonomous QGC Mission  |  208 × 214 m Coverage Area',
+    'UAV Flight Trajectory — Raw GNSS vs RTK-Corrected\n'
+    f'Level 2 autonomous QGC mission  |  ≈{bbox_e:.0f} × {bbox_n:.0f} m area, '
+    f'{max_r:.0f} m max range from home',
     pad=8)
 ax.set_aspect('equal', adjustable='datalim')
 ax.grid(True, ls='--', lw=0.4, alpha=0.5)
-
-legend_handles_traj = [
-    Line2D([0],[0], color=C_GT, lw=1.8, label='Ground Truth Path'),
-    mpatches.Patch(color=C_RTK, alpha=0.55,
-                   label=f'RTK-Corrected  (μ err = {np.mean(fixed_rtk):.3f} m, RTK Fixed)'),
-    mpatches.Patch(color=C_RAW, alpha=0.35,
-                   label=f'Raw GNSS  (μ err = {raw_mean:.2f} m)'),
-    Line2D([0],[0], marker='o', color='w', markerfacecolor='#8E44AD',
-           ms=9, label='Home / Takeoff Point'),
-]
-ax.legend(handles=legend_handles_traj,
-          loc='upper center', bbox_to_anchor=(0.5, -0.10),
-          ncol=2, fontsize=9.5, framealpha=0.93, edgecolor='#CCCCCC')
+ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.10), ncol=2, fontsize=9.5,
+          framealpha=0.93, edgecolor='#CCCCCC')
 
 plt.savefig(os.path.join(OUT_DIR, 'l2_trajectory.png'))
 plt.close()
 
 # ═══════════════════════════════════════════════════════════════════════════
-# Figure 5 — Accuracy Summary
+# Figure 5 — Performance summary (segment-aware, honest framing)
 # ═══════════════════════════════════════════════════════════════════════════
 print('[5/6] Generating: l2_accuracy_summary.png')
 
 fig = plt.figure(figsize=(15, 5.8))
-fig.subplots_adjust(left=0.06, right=0.97, top=0.84, bottom=0.14, wspace=0.42)
-fig.suptitle('RTK Positioning Performance Summary — Level 2 PX4/Gazebo Simulation',
+fig.subplots_adjust(left=0.06, right=0.97, top=0.82, bottom=0.18, wspace=0.34)
+fig.suptitle('RTK Positioning Performance Summary — Level 2 PX4/Gazebo  |  In-flight result vs initialization',
              fontsize=12, fontweight='bold', y=0.97)
+gs = GridSpec(1, 3, figure=fig, wspace=0.34)
+axA, axB, axC = fig.add_subplot(gs[0]), fig.add_subplot(gs[1]), fig.add_subplot(gs[2])
 
-gs  = GridSpec(1, 3, figure=fig, wspace=0.42)
-axA = fig.add_subplot(gs[0])
-axB = fig.add_subplot(gs[1])
-axC = fig.add_subplot(gs[2])
-
-# ── Panel A: Grouped bar — raw vs RTK per phase ─────────────────────────────
-categories = ['All Samples', 'RTK Float\n(5–15 s)', 'RTK Fixed\n(≥ 15 s)']
-raw_m_A = [np.mean(raw_err), np.mean(raw_err[m_float]), np.mean(raw_err[m_fixed])]
-rtk_m_A = [np.mean(rtk_err), np.mean(rtk_err[m_float]), np.mean(rtk_err[m_fixed])]
-
-x = np.arange(len(categories)); w = 0.35
-bar_c_rtk = [C_RTK, STATUS_COLORS['RTK_FLOAT'], STATUS_COLORS['RTK_FIXED']]
-b1 = axA.bar(x - w/2, raw_m_A, w, color=C_RAW, alpha=0.82, edgecolor='white', label='Raw GNSS')
-b2 = axA.bar(x + w/2, rtk_m_A, w, color=bar_c_rtk, alpha=0.85, edgecolor='white',
-             label='RTK-Corrected')
-
-y_top_A = max(raw_m_A) * 1.28
-for bars, means in [(b1, raw_m_A), (b2, rtk_m_A)]:
-    for bar, m in zip(bars, means):
-        axA.text(bar.get_x() + bar.get_width()/2, m + y_top_A * 0.025,
-                 f'{m:.3f}', ha='center', va='bottom', fontsize=8.5, fontweight='bold')
-
-axA.set_xticks(x)
-axA.set_xticklabels(categories, fontsize=9.5)
-axA.set_ylabel('Mean 3D Positioning Error (m)')
-axA.set_title('Mean Error by Fix Phase', pad=6)
+# Panel A — mean RTK error by physical segment (init transient vs steady regimes)
+seg_labels = ['Initialization\n(t<50 s, scripted)', 'Ground-idle\nFixed', 'In-flight\n(RTK Fixed)']
+seg_data   = [rtk_err[m_init], rtk_err[m_idle_fixed], rtk_flight]
+seg_means  = [float(np.mean(d)) for d in seg_data]
+seg_stds   = [float(np.std(d))  for d in seg_data]
+seg_cols   = [STATUS_COLORS['CORRECTION_LOST'], '#90A4AE', C_RTK]
+y_top_A = max(m + s for m, s in zip(seg_means, seg_stds)) * 1.35
+barsA = axA.bar(seg_labels, seg_means, yerr=seg_stds, color=seg_cols, alpha=0.85,
+                capsize=5, error_kw=dict(elinewidth=1.4, capthick=1.4), edgecolor='white')
+for bar, m, s in zip(barsA, seg_means, seg_stds):
+    axA.text(bar.get_x() + bar.get_width()/2, m + s + y_top_A*0.03, f'{m:.3f} m',
+             ha='center', va='bottom', fontsize=8.6, fontweight='bold')
+axA.set_ylabel('Mean 3D positioning error (m)')
+axA.set_title('Mean Error by Session Segment\n(error bars = ±1σ)', pad=6)
 axA.set_ylim(0, y_top_A)
 axA.grid(True, axis='y', ls='--', lw=0.4, alpha=0.5)
-axA.legend(fontsize=9.0, loc='upper right')
+panel_label(axA, 'A')
 
-# ── Panel B: Fix status pie (4 slices) ─────────────────────────────────────
-status_counts = {s: int(np.sum(status == s)) for s in STATUS_COLORS if np.sum(status == s) > 0}
-pie_labels    = [f'{s}\n({c:,} · {c/N*100:.1f}%)' for s, c in status_counts.items()]
-pie_colors    = [STATUS_COLORS[s] for s in status_counts]
+# Panel B — fix-status composition DURING FLIGHT (replaces misleading whole-session pie)
+flight_status_counts = {s: int(np.sum(status[m_flight] == s))
+                        for s in STATUS_COLORS if np.sum(status[m_flight] == s) > 0}
+labels_b = [f'{s.replace("_"," ")}\n({c:,} · {c/m_flight.sum()*100:.1f}%)'
+            for s, c in flight_status_counts.items()]
+colors_b = [STATUS_COLORS[s] for s in flight_status_counts]
+wedges, _, autot = axB.pie(list(flight_status_counts.values()), colors=colors_b, startangle=90,
+                           autopct=lambda p: f'{p:.0f}%' if p >= 3.5 else '',
+                           pctdistance=0.7, wedgeprops=dict(edgecolor='white', linewidth=1.8))
+for at in autot:
+    at.set_fontsize(10); at.set_fontweight('bold'); at.set_color('white')
+axB.legend(wedges, labels_b, loc='upper center', bbox_to_anchor=(0.5, -0.04),
+           fontsize=9, framealpha=0.92, edgecolor='#CCCCCC')
+axB.set_title(f'RTK Fix Status During Flight\n(n = {m_flight.sum():,}  |  '
+              f'{T_LANDING-T_TAKEOFF:.0f} s airborne)', pad=6)
+panel_label(axB, 'B', dx=-0.05)
 
-def safe_pct(pct):
-    return f'{pct:.1f}%' if pct >= 3.5 else ''
-
-wedges, _, autotexts = axB.pie(
-    list(status_counts.values()),
-    colors=pie_colors, startangle=90,
-    autopct=safe_pct, pctdistance=0.68,
-    wedgeprops=dict(edgecolor='white', linewidth=1.8))
-for at in autotexts:
-    at.set_fontsize(9.5); at.set_fontweight('bold'); at.set_color('white')
-
-axB.legend(wedges, pie_labels,
-           loc='upper center', bbox_to_anchor=(0.5, -0.08),
-           fontsize=8.5, ncol=1, framealpha=0.92, edgecolor='#CCCCCC')
-axB.set_title(f'RTK Fix Status Distribution\n(n = {N:,}  |  {DURATION:.0f} s total)', pad=6)
-
-# ── Panel C: RTK-corrected error per phase ──────────────────────────────────
-phase_labels = ['GNSS Only\n(0–5 s)', 'RTK Float\n(5–15 s)',
-                'RTK Fixed\n(≥ 15 s)', 'Corr. Lost\n(45–50 s)']
-phase_masks  = [m_gnss, m_float, m_fixed, m_lost]
-phase_colors = [STATUS_COLORS[s] for s in
-                ['GNSS_ONLY','RTK_FLOAT','RTK_FIXED','CORRECTION_LOST']]
-phase_means  = [np.mean(rtk_err[m]) if m.sum() > 0 else 0.0 for m in phase_masks]
-phase_stds   = [np.std(rtk_err[m])  if m.sum() > 0 else 0.0 for m in phase_masks]
-
-y_top_C = max(m + s for m, s in zip(phase_means, phase_stds)) * 1.38
-bars_C = axC.bar(phase_labels, phase_means, yerr=phase_stds,
-                 color=phase_colors, alpha=0.84, capsize=5,
-                 error_kw=dict(elinewidth=1.4, capthick=1.4), edgecolor='white')
-
-for bar, m, s in zip(bars_C, phase_means, phase_stds):
-    axC.text(bar.get_x() + bar.get_width()/2, m + s + y_top_C * 0.03,
-             f'{m:.3f} m', ha='center', va='bottom', fontsize=8.5, fontweight='bold')
-
-axC.set_ylabel('RTK-Corrected Error (m)')
-axC.set_title('RTK-Corrected Error per Phase\n(Error bars = ± 1 σ)', pad=6)
+# Panel C — in-flight improvement: raw vs RTK
+cats = ['Raw GNSS', 'RTK-corrected']
+vals = [raw_mean, rtk_mean]
+cols = [C_RAW, C_RTK]
+barsC = axC.bar(cats, vals, color=cols, alpha=0.85, edgecolor='white', width=0.55)
+y_top_C = max(vals) * 1.25
+for bar, v in zip(barsC, vals):
+    axC.text(bar.get_x()+bar.get_width()/2, v + y_top_C*0.02, f'{v:.3f} m',
+             ha='center', va='bottom', fontsize=9.5, fontweight='bold')
+axC.set_ylabel('Mean in-flight error (m)')
 axC.set_ylim(0, y_top_C)
+axC.set_title('In-Flight Accuracy Improvement', pad=6)
 axC.grid(True, axis='y', ls='--', lw=0.4, alpha=0.5)
-
-axC.text(0.97, 0.97,
-         f'Overall improvement\n{raw_mean:.3f} m → {rtk_mean:.3f} m\n= {IMP_PCT:.1f}%',
-         transform=axC.transAxes, fontsize=8.8, va='top', ha='right',
-         bbox=dict(boxstyle='round,pad=0.40', facecolor='#EBF5FB',
-                   edgecolor='#AED6F1', alpha=0.95))
+axC.text(0.97, 0.95, f'{raw_mean:.3f} m → {rtk_mean:.3f} m\n= {IMP_PCT:.1f}% improvement\n'
+                     f'({rtk_mean*100:.1f} cm, RTK Fixed)',
+         transform=axC.transAxes, fontsize=9.2, va='top', ha='right',
+         bbox=dict(boxstyle='round,pad=0.4', facecolor='#EBF5FB', edgecolor='#AED6F1', alpha=0.95))
+panel_label(axC, 'C')
 
 plt.savefig(os.path.join(OUT_DIR, 'l2_accuracy_summary.png'))
 plt.close()
@@ -575,112 +604,90 @@ plt.close()
 print('[6/6] Generating: l2_qgc_crossval.png')
 
 fig = plt.figure(figsize=(15, 6.0))
-fig.subplots_adjust(left=0.06, right=0.97, top=0.85, bottom=0.14, wspace=0.38)
+fig.subplots_adjust(left=0.06, right=0.97, top=0.84, bottom=0.16, wspace=0.34)
 fig.suptitle(
     'QGC ULog Cross-Validation — PX4/Gazebo Flight Data vs RTK Positioning System\n'
-    'Level 2 Simulation  |  166 s Autonomous Mission',
+    'Level 2  |  Independent ground-truth confirmation that the RTK module ran against a real PX4 flight',
     fontsize=12, fontweight='bold', y=0.98)
+gs2 = GridSpec(1, 3, figure=fig, wspace=0.34)
+axT, axB2, axA2 = fig.add_subplot(gs2[0]), fig.add_subplot(gs2[1]), fig.add_subplot(gs2[2])
 
-gs2 = GridSpec(1, 3, figure=fig, wspace=0.38)
-axT = fig.add_subplot(gs2[0])     # trajectory from ULog
-axB2 = fig.add_subplot(gs2[1])    # 3-way accuracy bar chart
-axA2 = fig.add_subplot(gs2[2])    # altitude profile from ULog
-
-# ── Panel 1: ULog GT trajectory + GPS scatter ────────────────────────────────
 step_ul = max(1, len(ul_gps_t) // 800)
-axT.scatter(ul_gps_x[::step_ul], ul_gps_y[::step_ul],
-            color=C_RAW, s=8, alpha=0.25, zorder=2, label='PX4 GPS Positions')
-axT.plot(ul_gt_x, ul_gt_y, color=C_GT, lw=1.8, zorder=4, label='Ground Truth Path')
-axT.plot(ul_gt_x[0], ul_gt_y[0], 'o', color='#8E44AD', ms=8, zorder=5)
-
-# Mission waypoints from ULog
+axT.scatter(ul_gps_x[::step_ul], ul_gps_y[::step_ul], color=C_RAW, s=10, alpha=0.25,
+            zorder=2, label='PX4 GPS positions')
+axT.plot(ul_gt_x, ul_gt_y, color=C_GT, lw=1.8, zorder=4, label='Ground-truth path')
+axT.plot(ul_gt_x[0], ul_gt_y[0], 'o', color=OK_PURPLE, ms=9, zorder=5)
 nav_d = next(d for d in ulog.data_list if d.name == 'navigator_mission_item')
-wp_lat = nav_d.data['latitude']
-wp_lon = nav_d.data['longitude']
-wp_x   = (wp_lon - UL_BASE_LON) * UL_M_LON
-wp_y   = (wp_lat - UL_BASE_LAT) * 111320.0
-axT.scatter(wp_x, wp_y, marker='^', color='#E74C3C', s=55, zorder=6,
-            label='Mission Waypoints', edgecolors='white', linewidths=0.6)
-
+wp_x = (nav_d.data['longitude'] - UL_BASE_LON) * UL_M_LON
+wp_y = (nav_d.data['latitude']  - UL_BASE_LAT) * 111320.0
+axT.scatter(wp_x, wp_y, marker='^', color=OK_VERMIL, s=60, zorder=6,
+            edgecolors='white', linewidths=0.6, label='Mission waypoints')
 axT.set_xlabel('East (m)  [ENU, ULog origin]')
 axT.set_ylabel('North (m)  [ENU, ULog origin]')
-axT.set_title('ULog Ground Truth Trajectory\n& PX4 GPS Positions', pad=6)
+axT.set_title('ULog Ground-Truth Trajectory\n& PX4 GPS Positions', pad=6)
 axT.set_aspect('equal', adjustable='datalim')
 axT.grid(True, ls='--', lw=0.4, alpha=0.5)
-axT.legend(loc='upper center', bbox_to_anchor=(0.5, -0.12),
-           ncol=1, fontsize=9.0, framealpha=0.93)
+axT.legend(loc='upper center', bbox_to_anchor=(0.5, -0.12), ncol=1, fontsize=9.0, framealpha=0.93)
+panel_label(axT, 'A')
 
-# ── Panel 2: 3-way accuracy bar chart ───────────────────────────────────────
-labels_3 = ['Raw GNSS\n(simulated)', 'PX4 GPS\n(EPH reported)', 'RTK-Corrected\n(RTK Fixed)']
-values_3  = [raw_mean, px4_eph_mean, float(np.mean(fixed_rtk))]
-colors_3  = [C_RAW, '#E67E22', STATUS_COLORS['RTK_FIXED']]
-
-bars_3 = axB2.bar(labels_3, values_3, color=colors_3, alpha=0.84,
-                  edgecolor='white', width=0.5)
-y_top_3 = max(values_3) * 1.30
-for bar, v in zip(bars_3, values_3):
-    axB2.text(bar.get_x() + bar.get_width()/2, v + y_top_3 * 0.025,
-              f'{v:.3f} m', ha='center', va='bottom', fontsize=9.0, fontweight='bold')
-
-axB2.set_ylabel('Positioning Error / Accuracy (m)')
-axB2.set_title('Three-Way Accuracy Comparison\n(ULog EPH vs Raw GNSS vs RTK)', pad=6)
+labels_3 = ['Raw GNSS\n(simulated)', 'PX4 GPS EPH\n(ULog reported)', 'RTK-corrected\n(in-flight)']
+values_3 = [raw_mean, px4_eph_mean, rtk_mean]
+colors_3 = [C_RAW, OK_ORANGE, STATUS_COLORS['RTK_FIXED']]
+bars3 = axB2.bar(labels_3, values_3, color=colors_3, alpha=0.85, edgecolor='white', width=0.55)
+y_top_3 = max(values_3) * 1.28
+for bar, v in zip(bars3, values_3):
+    axB2.text(bar.get_x()+bar.get_width()/2, v + y_top_3*0.02, f'{v:.3f} m',
+              ha='center', va='bottom', fontsize=9.2, fontweight='bold')
+axB2.set_ylabel('Positioning error / accuracy (m)')
+axB2.set_title('Three-Way Accuracy Comparison\n(independent EPH cross-check)', pad=6)
 axB2.set_ylim(0, y_top_3)
 axB2.grid(True, axis='y', ls='--', lw=0.4, alpha=0.5)
+axB2.text(0.5, -0.24,
+          'Raw GNSS & RTK: measured error vs ground truth (CSV, in-flight)\n'
+          'PX4 GPS EPH: PX4-reported horizontal accuracy estimate (1σ, ULog) — independent of our model',
+          transform=axB2.transAxes, fontsize=7.6, ha='center', va='top', color='#555555', style='italic')
+panel_label(axB2, 'B', dx=-0.05)
 
-# Footnote explaining each metric
-axB2.text(0.50, -0.22,
-          'Raw GNSS: measured error vs GT (Level 2 CSV)\n'
-          'PX4 GPS EPH: reported uncertainty estimate (ULog)\n'
-          'RTK Fixed: measured error vs GT (Level 2 CSV)',
-          transform=axB2.transAxes, fontsize=7.5, ha='center', va='top',
-          color='#555555', style='italic')
-
-# ── Panel 3: UAV altitude profile from ULog ─────────────────────────────────
 ul_t_rel = ul_gt_t - ul_gt_t[0]
-axA2.plot(ul_t_rel, ul_gt_alt, color=C_GT, lw=1.8, label='Ground Truth Altitude')
-
-# Mark takeoff and landing
-take_idx = np.argmax(ul_gt_alt > 2.0)
-land_idx = len(ul_gt_alt) - 1 - np.argmax(ul_gt_alt[::-1] > 2.0)
-axA2.axvline(ul_t_rel[take_idx], color='#27AE60', ls='--', lw=1.0, alpha=0.75)
-axA2.axvline(ul_t_rel[land_idx], color='#E74C3C', ls='--', lw=1.0, alpha=0.75)
-axA2.text(ul_t_rel[take_idx] + 1, 2.5, 'Takeoff', fontsize=8.0,
-          color='#27AE60', va='bottom')
-axA2.text(ul_t_rel[land_idx] - 1, 2.5, 'Land', fontsize=8.0,
-          color='#E74C3C', va='bottom', ha='right')
-
-axA2.set_xlabel('Elapsed Time (s)')
+axA2.plot(ul_t_rel, ul_gt_alt, color=C_GT, lw=1.8, label='Ground-truth altitude')
+axA2.fill_between(ul_t_rel, ul_gt_alt.min(), ul_gt_alt, color=C_GT, alpha=0.07)
+take_idx = int(np.argmax(ul_gt_alt > ul_gt_alt.min() + 2.0))
+land_idx = len(ul_gt_alt) - 1 - int(np.argmax(ul_gt_alt[::-1] > ul_gt_alt.min() + 2.0))
+axA2.axvline(ul_t_rel[take_idx], color=OK_GREEN,  ls='--', lw=1.0, alpha=0.8)
+axA2.axvline(ul_t_rel[land_idx], color=OK_VERMIL, ls='--', lw=1.0, alpha=0.8)
+axA2.text(ul_t_rel[take_idx]+1, ul_gt_alt.min()+3, 'Take-off', fontsize=8, color=OK_GREEN, va='bottom')
+axA2.text(ul_t_rel[land_idx]-1, ul_gt_alt.min()+3, 'Land', fontsize=8, color=OK_VERMIL, va='bottom', ha='right')
+axA2.set_xlabel('Elapsed time (s)  [ULog]')
 axA2.set_ylabel('Altitude (m AMSL)')
-axA2.set_title('UAV Altitude Profile — ULog\n(Confirms mission execution)', pad=6)
+axA2.set_title('UAV Altitude Profile — ULog\n(confirms a full mission was flown)', pad=6)
 axA2.set_xlim(0, ul_t_rel[-1])
-axA2.set_ylim(bottom=0)
 axA2.grid(True, ls='--', lw=0.4, alpha=0.5)
-
-# Stats annotation (EPH vs RTK) — in empty upper-right area of altitude plot
-note = (f'PX4 GPS EPH = {px4_eph_mean:.2f} m\n'
-        f'RTK Fixed μ = {np.mean(fixed_rtk):.4f} m\n'
-        f'RTK improvement vs EPH:\n'
-        f'{(px4_eph_mean - np.mean(fixed_rtk))/px4_eph_mean*100:.1f}%')
-axA2.text(0.97, 0.97, note, transform=axA2.transAxes,
-          fontsize=8.5, va='top', ha='right',
-          bbox=dict(boxstyle='round,pad=0.40', facecolor='#EBF5FB',
-                    edgecolor='#AED6F1', alpha=0.95))
+peak_alt = float(ul_gt_alt.max() - ul_gt_alt.min())
+axA2.text(0.97, 0.05,
+          f'PX4 GPS EPH = {px4_eph_mean:.2f} m\nRTK in-flight μ = {rtk_mean:.4f} m\n'
+          f'RTK vs EPH: {(px4_eph_mean-rtk_mean)/px4_eph_mean*100:.0f}% tighter\n'
+          f'Peak climb ≈ {peak_alt:.0f} m AGL',
+          transform=axA2.transAxes, fontsize=8.4, va='bottom', ha='right',
+          bbox=dict(boxstyle='round,pad=0.4', facecolor='#EBF5FB', edgecolor='#AED6F1', alpha=0.95))
+panel_label(axA2, 'C')
 
 plt.savefig(os.path.join(OUT_DIR, 'l2_qgc_crossval.png'))
 plt.close()
 
 # ── Summary ───────────────────────────────────────────────────────────────────
 print()
-print('=' * 58)
-print('Level 2 analysis complete.')
-print(f'Improvement percentage: {IMP_PCT:.2f}%')
-print(f'  Raw GNSS mean error : {raw_mean:.4f} m')
-print(f'  RTK-corrected mean  : {rtk_mean:.4f} m')
-print(f'  PX4 GPS EPH (ULog)  : {px4_eph_mean:.4f} m')
-print(f'  PX4 GPS actual err  : {px4_err_mean:.4f} m')
+print('=' * 64)
+print('Level 2 analysis complete (segmented reanalysis).')
+print(f'  IN-FLIGHT (t={T_TAKEOFF:.0f}-{T_LANDING:.0f}s, n={m_flight.sum():,}):')
+print(f'    Raw GNSS mean   : {raw_mean:.4f} m')
+print(f'    RTK mean        : {rtk_mean:.4f} m  ({rtk_mean*100:.2f} cm)  [HEADLINE]')
+print(f'    Improvement     : {IMP_PCT:.2f}%')
+print(f'    RTK_FIXED       : {flight_fixed_pct:.1f}% of flight')
+print(f'  Cross-check: PX4 GPS EPH (ULog) = {px4_eph_mean:.4f} m ; measured PX4 GPS err = {px4_err_mean:.4f} m')
+print(f'  (whole-log RTK mean, reference only = {rtk_mean_wholelog:.4f} m)')
 print()
 for fn in sorted(os.listdir(OUT_DIR)):
     if fn.endswith('.png'):
         sz = os.path.getsize(os.path.join(OUT_DIR, fn)) / 1024
         print(f'  {fn}  ({sz:.0f} KB)')
-print('=' * 58)
+print('=' * 64)
