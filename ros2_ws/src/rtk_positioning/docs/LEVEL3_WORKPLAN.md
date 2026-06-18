@@ -20,10 +20,14 @@ PX4/Gazebo-integrated RTK simulation. Real UAV pose from PX4 SITL. Correction-dr
 state transitions via `rtcm_correction_simulator_node`. One deliberate CORRECTION_LOST
 event with recovery demonstrated. QGC mission flown and cross-validated against ULog.
 
-Key results: 10,282 samples · Raw GNSS 2.413 m · RTK 0.080 m · 96.7% improvement ·
-98.1% time in RTK_FIXED
+Key results (in-flight, t≈497–986 s, 100% RTK Fixed): Raw GNSS 2.42 m · RTK **0.047 m
+(4.7 cm)** · **98.0% improvement**. The convergence and the CORRECTION_LOST event are a
+scripted, stationary **initialization** sequence (t < 50 s, pre-flight) and are reported
+separately from the in-flight accuracy — they are not in-flight events. (The whole-log mean
+of 0.080 m is *not* the result; it is inflated by the initialization transients.)
 
-Level 2 results are the **Scenario 1 baseline** for Level 3. No re-running needed.
+Level 2's **in-flight 0.047 m** is the **Scenario 1 baseline** for Level 3 (already used as
+such in the analysis). No re-running needed.
 
 ---
 

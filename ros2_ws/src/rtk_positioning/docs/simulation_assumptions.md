@@ -1,6 +1,9 @@
-# Level 1 Simulation Assumptions
+# Level 1 & 2 Simulation Assumptions
 
-This document explicitly lists all assumptions and simplifications made in the Level 1 RTK positioning simulation. Any user of this module must understand these before interpreting results.
+This document explicitly lists all assumptions and simplifications made in the RTK positioning
+simulation. Sections 1–10 describe the Level 1 model; **all of them carry forward into Level 2
+unchanged** except where the Level 2 Addendum (Section 11) states otherwise. Any user of this
+module must understand these before interpreting results.
 
 ---
 
@@ -154,3 +157,45 @@ Level 2 launch file and logging
 ```
 
 Level 1 files must not be deleted or broken when Level 2 is added.
+
+---
+
+## 11. Level 2 Addendum
+
+Level 2 sources the UAV pose from the PX4/Gazebo simulation (via `ros_gz_bridge`) and drives RTK
+status from simulated correction-message quality rather than a hard-coded clock. The following
+clarifications apply on top of Sections 1–10.
+
+### 11.1 Status is correction-quality-driven, but the quality is still scripted
+
+**Assumption:** In Level 2, `rtk_positioning_node` derives RTK status from the
+`correction_quality` / `correction_available` fields of the `SimulatedRtcm` message (thresholds:
+Float ≥ 0.4, Fixed ≥ 0.8, timeout 2.0 s) — *not* from the Level 1 time table in Section 2.
+
+**What this means:** the status logic itself reacts to correction conditions. **However**, those
+conditions are emitted by `rtcm_correction_simulator_node` on a **fixed scripted timeline**
+(0–5 s unavailable → 5–15 s quality 0.5 → 15–45 s quality 0.95 → 45–50 s lost → 50 s+ recovered).
+So the GNSS→Float→Fixed convergence and the correction-loss/recovery event still occur at
+**pre-set times**, not because of real satellite geometry or carrier-phase ambiguity resolution.
+
+**What cannot be claimed:** that Level 2 shows real RTK convergence behaviour. The convergence
+timing is a design choice (same caveat as Section 2).
+
+### 11.2 Initialization happens on the ground, before the flight
+
+In the analysed run the logger started ~7 minutes before take-off (take-off at t ≈ 497 s of a
+1028 s log). The entire scripted initialization sequence (convergence + the correction-loss
+event, t < 50 s) therefore occurs while the vehicle is **stationary on the ground**. The Level 2
+analysis treats this window as an **initialization / state-machine demonstration** and reports
+in-flight positioning accuracy **separately** (from the airborne window). The whole-log mean is
+*not* used as the accuracy result. In-flight resilience to a mid-mission correction loss is
+delegated to Level 3.
+
+### 11.3 Fictional base-station coordinate vs the real Gazebo world origin
+
+The ENU base station remains the Section 6 Beijing reference (39.981000°, 116.344000°), but the
+real PX4/Gazebo flight runs at the default world origin near **ETH Zürich (≈47.3980°, 8.5462°)**.
+Positioning **errors** are computed in metres within a local ENU frame, and the forward
+(ENU→lat/lon) and inverse (lat/lon→ENU) transforms cancel, so the Beijing base is **harmless for
+the metre-based error metrics and the trajectory overlay**. Only the absolute latitude/longitude
+written to the CSV are fictional; they should not be interpreted as the physical flight location.
