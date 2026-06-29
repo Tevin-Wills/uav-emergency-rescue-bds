@@ -6,12 +6,12 @@ Dissertation research project measuring the performance of BeiDou Short Message 
 
 ## Research Gaps Addressed
 
-| Gap | Description | Status |
-|-----|-------------|--------|
-| Gap 1 | ASCII vs Binary coordinate encoding (bit-size) | Complete |
-| Gap 2 | End-to-end latency (T1/T2/T3, 30 transmissions) | Baseline collected |
-| Gap 3 | Field test delivery rate (4 envs × 3 locations × 20 TX) | Pending hardware |
-| Gap 6 | Telemetry compression: ASCII / Binary / Huffman | Complete |
+| Gap   | Description                                               | Status             |
+| ----- | --------------------------------------------------------- | ------------------ |
+| Gap 1 | ASCII vs Binary coordinate encoding (bit-size)            | Complete           |
+| Gap 2 | End-to-end latency (T1/T2/T3, 30 transmissions)           | Baseline collected |
+| Gap 3 | Field test delivery rate (4 envs × 3 locations × 20 TX) | Pending hardware   |
+| Gap 6 | Telemetry compression: ASCII / Binary / Huffman           | Complete           |
 
 ---
 
@@ -43,13 +43,13 @@ BDS-SMC2/
 
 ## Hardware Setup
 
-| Component | Detail |
-|-----------|--------|
-| MCU | ESP32 dev board |
-| BDS Module | BDS-SMC/RDSS module (RS232-TTL adapter) |
-| Wiring | BDS RXD → GPIO16, TXD → GPIO17, VCC → 3.3V, GND → GND |
-| LED | Green LED → GPIO27 |
-| PC Software | XCOM V2.0 (receives BDS module responses) |
+| Component   | Detail                                                    |
+| ----------- | --------------------------------------------------------- |
+| MCU         | ESP32 dev board                                           |
+| BDS Module  | BDS-SMC/RDSS module (RS232-TTL adapter)                   |
+| Wiring      | BDS RXD → GPIO16, TXD → GPIO17, VCC → 3.3V, GND → GND |
+| LED         | Green LED → GPIO27                                       |
+| PC Software | XCOM V2.0 (receives BDS module responses)                 |
 
 ---
 
@@ -59,38 +59,43 @@ BDS-SMC2/
 int MODE = 0;  // 0=ASCII  1=Binary  2=Huffman (Gap 6)
 ```
 
-| MODE | Gap | Description |
-|------|-----|-------------|
-| 0 | Gap 1, 2 & 3 | ASCII coordinate encoding — baseline |
-| 1 | Gap 1 | Binary fixed-point encoding (64-bit vs 264-bit ASCII) |
-| 2 | Gap 6 | Dynamic Huffman compression of full telemetry string |
+| MODE | Gap          | Description                                           |
+| ---- | ------------ | ----------------------------------------------------- |
+| 0    | Gap 1, 2 & 3 | ASCII coordinate encoding — baseline                 |
+| 1    | Gap 1        | Binary fixed-point encoding (64-bit vs 264-bit ASCII) |
+| 2    | Gap 6        | Dynamic Huffman compression of full telemetry string  |
 
 ---
 
 ## Quick Start
 
 ### 1. Clone the repo
+
 ```bash
 git clone https://github.com/letsoalomaile1/BDS-SMC2.git
 cd BDS-SMC2
 ```
 
 ### 2. Install Python dependencies
+
 ```bash
 pip install pyserial matplotlib pandas dahuffman scipy reportlab fpdf2
 ```
 
 ### 3. Flash firmware
+
 - Open `firmware/esp32_sender/esp32_sender.ino` in Arduino IDE 1.8.19
 - Set `MODE` to the experiment you want to run
 - Select your COM port → Upload
 
 ### 4. Log serial output
+
 ```bash
 python python/serial_logger.py
 ```
 
 ### 5. Run analysis
+
 ```bash
 python python/latency_analysis.py      # Gap 2
 python python/field_test_logger.py     # Gap 3
@@ -101,12 +106,12 @@ python python/telemetry_compare.py     # Gap 6
 
 ## BDS Network Login
 
-| Field | Value |
-|-------|-------|
-| Portal | http://bdrd.hwasmart.com/ |
-| User 1 | RCSSTEAP_3058_SM_1 |
-| User 2 | RCSSTEAP_3058_SM_2 |
-| Password | 123456 |
+| Field    | Value                     |
+| -------- | ------------------------- |
+| Portal   | http://bdrd.hwasmart.com/ |
+| User 1   | RCSSTEAP_3058_SM_1        |
+| User 2   | RCSSTEAP_3058_SM_2        |
+| Password | 123456                    |
 
 > Bind your BDS card using the ID + IMSI printed on the card back before first use.
 
@@ -132,19 +137,18 @@ Checksum = NMEA XOR of all bytes between `$` and `*`.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed git workflow.
 
----
 
 ## Dependencies
 
-| Tool | Version |
-|------|---------|
-| Arduino IDE | 1.8.19 |
+| Tool                | Version              |
+| ------------------- | -------------------- |
+| Arduino IDE         | 1.8.19               |
 | ESP32 board package | via Espressif mirror |
-| Python | 3.14 |
-| pyserial | latest |
-| matplotlib | latest |
-| pandas | latest |
-| dahuffman | latest |
+| Python              | 3.14                 |
+| pyserial            | latest               |
+| matplotlib          | latest               |
+| pandas              | latest               |
+| dahuffman           | latest               |
 
 ---
 
