@@ -10,7 +10,7 @@ Dissertation research project measuring the performance of BeiDou Short Message 
 | ----- | --------------------------------------------------------- | ------------------ |
 | Gap 1 | ASCII vs Binary coordinate encoding (bit-size)            | Complete           |
 | Gap 2 | End-to-end latency (T1/T2/T3, 30 transmissions)           | Baseline collected |
-| Gap 3 | Field test delivery rate (4 envs × 3 locations × 20 TX) | Pending hardware   |
+| Gap 3 | Field test delivery rate (4 envs × 12 locations, 232 TX)  | Complete (ASCII payload, 232 TX) |
 | Gap 6 | Telemetry compression: ASCII / Binary / Huffman           | Complete           |
 
 ---

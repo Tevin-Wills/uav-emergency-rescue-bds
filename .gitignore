@@ -48,3 +48,13 @@ generate_paper_plan.py
 
 # Local hardware rig photos (personal)
 _photos/
+
+# LaTeX build artifacts (PDF is committed; .tex is the source)
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz
+
+# Office temporary lock files
+~$*

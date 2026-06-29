@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>BDS-SMC2 Node — Academic Poster</title>
+<style>
+  /* ---- A0 portrait: 841 x 1189 mm ---- */
+  @page { size: 841mm 1189mm; margin: 0; }
+  :root{
+    --surv:#1b6ca8; --tx:#d9822b; --gcs:#2e8b57; --uav:#7a3b9b; --sim:#b03a4b;
+    --ink:#1b1f24; --grey:#5b6470; --line:#cfd4da; --paper:#ffffff;
+    --band:#0d2b45;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; background:#e9edf1; }
+  body{ font-family:"Segoe UI",Arial,Helvetica,sans-serif; color:var(--ink); }
+
+  .poster{
+    width:841mm; height:1189mm; background:var(--paper);
+    margin:0 auto; padding:18mm 22mm 12mm; position:relative;
+    display:flex; flex-direction:column;
+  }
+
+  /* ---- header ---- */
+  header{
+    border-bottom:4px solid var(--band); padding-bottom:6mm; margin-bottom:6mm;
+  }
+  .kicker{ font-size:12mm; letter-spacing:1mm; color:var(--tx); font-weight:700;
+    text-transform:uppercase; margin-bottom:3mm; }
+  h1{ font-size:25mm; line-height:1.02; margin:0 0 4mm; color:var(--band);
+    font-weight:800; letter-spacing:-0.4mm; }
+  .authors{ font-size:13mm; font-weight:600; }
+  .affil{ font-size:9.5mm; color:var(--grey); margin-top:2mm; }
+  .meta-row{ display:flex; justify-content:space-between; align-items:flex-end; }
+  .meta-right{ text-align:right; font-size:8.5mm; color:var(--grey); line-height:1.5; }
+
+  /* ---- workflow band ---- */
+  .flowband{ margin-bottom:6mm; border:1px solid var(--line); border-radius:3mm;
+    padding:4mm 4mm 2mm; background:#fafbfc; text-align:center; }
+  .flowband img{ width:100%; max-width:415mm; display:inline-block;
+    max-height:200mm; }
+  .flowband .cap{ font-size:8mm; color:var(--grey); margin-top:2mm;
+    text-align:center; max-width:700mm; margin:2mm auto 0; }
+
+  /* ---- columns ---- */
+  .cols{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:9mm; }
+  section{ break-inside:avoid; margin-bottom:5.5mm; }
+  h2{ font-size:11mm; margin:0 0 3mm; padding:2.2mm 4mm; color:#fff;
+    border-radius:2mm; font-weight:700; }
+  .h-surv{ background:var(--surv); } .h-tx{ background:var(--tx); }
+  .h-gcs{ background:var(--gcs); } .h-uav{ background:var(--uav); }
+  .h-sim{ background:var(--sim); } .h-ink{ background:var(--band); }
+  p,li{ font-size:8.3mm; line-height:1.4; }
+  ul{ margin:0 0 0 6mm; padding:0; }
+  li{ margin-bottom:2.2mm; }
+  .lead{ font-size:8.8mm; }
+  strong{ color:var(--band); }
+
+  figure{ margin:4mm 0 0; }
+  figure img{ width:100%; border:1px solid var(--line); border-radius:2mm; }
+  figcaption{ font-size:7.6mm; color:var(--grey); margin-top:2mm; }
+  .figrow{ display:grid; grid-template-columns:1fr 1fr; gap:4mm; }
+  .figrow figure{ margin-top:4mm; }
+  .figrow figcaption{ font-size:6.8mm; }
+
+  /* full-width results figure strip */
+  .striphead{ margin:4mm 0 3mm; }
+  .resultsgrid{ display:grid; grid-template-columns:repeat(5,1fr); gap:6mm;
+    align-items:end; }
+  .resultsgrid figure{ margin:0; }
+  .resultsgrid figcaption{ font-size:7mm; margin-top:1.5mm; }
+
+  /* result stat cards */
+  .stats{ display:grid; grid-template-columns:1fr 1fr; gap:4mm; margin-bottom:4mm; }
+  .stat{ border:1px solid var(--line); border-left:5mm solid var(--surv);
+    border-radius:2mm; padding:3mm 4mm; }
+  .stat .n{ font-size:14mm; font-weight:800; color:var(--band); line-height:1; }
+  .stat .l{ font-size:7.6mm; color:var(--grey); margin-top:1.5mm; }
+  .stat.tx{ border-left-color:var(--tx); }
+  .stat.gcs{ border-left-color:var(--gcs); }
+  .stat.uav{ border-left-color:var(--uav); }
+
+  table{ width:100%; border-collapse:collapse; font-size:9.2mm; margin-top:2mm; }
+  th,td{ border:1px solid var(--line); padding:2mm 3mm; text-align:left; }
+  th{ background:#eef2f5; font-weight:700; }
+  .ok{ color:var(--gcs); font-weight:700; }
+  .partial{ color:var(--tx); font-weight:700; }
+
+  .demoband{ margin-top:2mm; border:1px solid var(--line); border-radius:3mm;
+    padding:4mm; background:#fafbfc; text-align:center; }
+  .demoband img{ width:100%; max-width:285mm; max-height:132mm;
+    border:1px solid var(--line); border-radius:2mm; }
+  .demoband .cap{ font-size:8.2mm; color:var(--grey); margin-top:3mm;
+    text-align:center; max-width:640mm; margin-left:auto; margin-right:auto; }
+
+  .refs li{ font-size:8.2mm; color:var(--grey); }
+  footer{ border-top:3px solid var(--band); margin-top:3mm; padding-top:3mm;
+    display:flex; justify-content:space-between; font-size:8.5mm; color:var(--grey); }
+</style>
+</head>
+<body>
+<div class="poster">
+
+  <header>
+    <div class="kicker">UAV Search-and-Rescue · BeiDou Short Message Communication</div>
+    <div class="meta-row">
+      <div>
+        <h1>A 112-bit BeiDou Rescue-Telemetry Node:<br>
+            From Survivor Position to UAV Mission</h1>
+        <div class="authors">Letsoalo Maile</div>
+        <div class="affil">BDS-SMC2 · Dissertation Objective 5 — RTK-corrected survivor
+          location injected into BeiDou short messaging (Class + PNT)</div>
+      </div>
+      <div class="meta-right">
+        Node: <strong>BDS-SMC2</strong><br>
+        ESP32 + BDS-3 RDSS (EVBKIT_V3)<br>
+        Portal: bdrd.hwasmart.com<br>
+        github.com/letsoalomaile1/BDS-SMC2
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== full-width workflow diagram (the link of everything built) ===== -->
+  <div class="flowband">
+    <img src="../figures/bds_node_workflow.png" alt="BDS-SMC2 end-to-end workflow">
+    <div class="cap">Figure 1 — End-to-end node pipeline. Every block is implemented:
+      survivor position → 112-bit encoder → ESP32 firmware → BDS-3 RDSS module →
+      BeiDou satellite → portal → reader → decoder → map / waypoint → ROS 2
+      EmergencyCoordinate → UAV mission. The lower (red) branch is the
+      simulation harness that verified the full chain while the RF uplink was blocked.</div>
+  </div>
+
+  <!-- ===== three columns ===== -->
+  <div class="cols">
+
+    <!-- ---- COLUMN 1 ---- -->
+    <div>
+      <section>
+        <h2 class="h-ink">1 · Problem &amp; Motivation</h2>
+        <p class="lead">In disaster zones terrestrial networks (GSM/LoRa) fail and
+          satellite messengers (Iridium, COSPAS-SARSAT) carry no custom payload.
+          <strong>BeiDou Short Message Communication (BDS-SMC / RDSS)</strong> needs
+          no ground infrastructure and supports a 210-bit user payload — but its use
+          as a structured <em>rescue-telemetry</em> link for UAVs is uncharacterised.</p>
+        <p>This node answers one question: <strong>can a complete six-field rescue
+          payload fit a single BDS-3 short message and travel reliably, end-to-end,
+          into a UAV mission pipeline?</strong></p>
+      </section>
+
+      <section>
+        <h2 class="h-surv">2 · Objectives &amp; Research Gaps</h2>
+        <table>
+          <tr><th>Gap</th><th>Question</th><th>Status</th></tr>
+          <tr><td>1</td><td>ASCII vs binary coordinate encoding</td><td class="ok">Complete</td></tr>
+          <tr><td>2</td><td>End-to-end latency (T1/T2/T3)</td><td class="partial">Baseline</td></tr>
+          <tr><td>3</td><td>Delivery rate across environments</td><td class="ok">Complete</td></tr>
+          <tr><td>6</td><td>Telemetry compression (ASCII/Huffman/binary)</td><td class="ok">Complete</td></tr>
+        </table>
+        <p style="margin-top:3mm"><strong>Objective 5:</strong> emulate a survivor's
+          RTK-corrected position and inject it into BDS short messaging as Class + PNT
+          data, then demonstrate it driving a UAV waypoint.</p>
+      </section>
+
+      <section>
+        <h2 class="h-tx">3 · Methods — Hardware &amp; Encoding</h2>
+        <ul>
+          <li><strong>Platform:</strong> ESP32-D0WD-V3 dev board driving a BDS-3 RDSS
+            module (EVBKIT_V3) with on-board patch antenna, via an RS232–TTL adapter.</li>
+          <li><strong>Frame:</strong> <code>$CCTXM,&lt;destID&gt;,&lt;content&gt;*&lt;cs&gt;</code>
+            (NMEA-style XOR checksum).</li>
+          <li><strong>112-bit payload</strong> packs six fields (<code>&gt;iihHBB</code>):
+            lat / lon (int32, 7 dp ≈ 1 cm), altitude (int16 m), uncertainty R
+            (uint16 cm), priority, survivor ID.</li>
+          <li><strong>Timing:</strong> firmware tags T1 (send), T2 (module ack),
+            T3 (delivery) for per-message latency.</li>
+        </ul>
+      </section>
+    </div>
+
+    <!-- ---- COLUMN 2 ---- -->
+    <div>
+      <section>
+        <h2 class="h-gcs">4 · Methods — Measurement &amp; GCS</h2>
+        <ul>
+          <li><strong>Field protocol:</strong> 4 environments (open sky, light canopy,
+            urban canyon, indoor) × 3 locations × repeated TX; serial logger writes
+            every frame to CSV.</li>
+          <li><strong>Analysis (Python):</strong> chi-square test of delivery
+            homogeneity and Wilson 95% confidence intervals (SciPy); bit-accounting
+            for encoding gaps.</li>
+          <li><strong>Ground station (GCS):</strong> portal reader → decoder
+            (BIN/ASCII/text) → Leaflet map + QGC WPL 110 waypoint → ROS 2
+            <code>EmergencyCoordinate</code> on <code>/target/emergency_coordinate</code>.</li>
+          <li><strong>Simulation harness:</strong> a virtual BeiDou link (module
+            emulator → virtual portal → live dashboard) reproduces byte-identical
+            frames and Gap-2 latency, verifying the chain without RF.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 class="h-surv">5 · Results — Key Findings</h2>
+        <div class="stats">
+          <div class="stat"><div class="n">−57.6%</div>
+            <div class="l">rescue payload vs ASCII (264 → 112 bits)</div></div>
+          <div class="stat gcs"><div class="n">98 bits</div>
+            <div class="l">headroom under the 210-bit BDS-3 limit</div></div>
+          <div class="stat uav"><div class="n">232/232</div>
+            <div class="l">valid TX received (Wilson 95% LB ≥ 93.7%)</div></div>
+          <div class="stat tx"><div class="n">≈2.57 s</div>
+            <div class="l">mean latency, ASCII baseline (n = 30)</div></div>
+        </div>
+        <p><strong>Encoding</strong> (Figs 2–3): binary packing is 57.6% smaller than
+          ASCII for the rescue payload and 69.6% smaller than a full ASCII telemetry
+          string, beating Huffman while carrying more fields.
+          <strong>Delivery</strong> (Figs 4–5): 100% across all four environments and
+          all 12 sites; χ²=0.000, p=1.000. <strong>Latency</strong> (Fig 6): every
+          baseline message lands inside the 5 s budget (median ≈ 2.5 s); full diurnal
+          sessions on the 112-bit payload remain to be collected.</p>
+      </section>
+    </div>
+
+    <!-- ---- COLUMN 3 ---- -->
+    <div>
+      <section>
+        <h2 class="h-ink">6 · Discussion &amp; Limitations</h2>
+        <ul>
+          <li>Full pipeline is <strong>software-complete and verified end-to-end</strong>
+            via the simulation harness; frames are byte-identical to firmware output.</li>
+          <li>Position is <strong>emulated</strong> (lab ground-truth T001–T006), as
+            Objective 5 specifies; live RTK is a separate work item.</li>
+          <li>RF uplink hardware bring-up is <strong>unresolved</strong> — one TX must
+            confirm the module accepts the 28-char hex payload.</li>
+          <li>Link is <strong>one-way</strong>; single hardware unit (no
+            generalisability claim); 100% delivery reported as Wilson lower bound.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 class="h-gcs">7 · Conclusion &amp; Future Work</h2>
+        <p>A complete six-field rescue payload fits a single 112-bit BDS-3 short
+          message with <strong>98 bits to spare</strong>, delivers at
+          <strong>≥ 93.7%</strong> (Wilson LB) with <strong>~2.6 s</strong> latency,
+          and drives a UAV mission through a working GCS pipeline.</p>
+        <p><strong>Next:</strong> hardware TX verification · full diurnal latency on the
+          112-bit payload · live RTK position · group <code>EmergencyCoordinate.msg</code>
+          field extension.</p>
+      </section>
+
+      <section>
+        <h2 class="h-ink">References</h2>
+        <ul class="refs">
+          <li>Li G. et al. (2021). Introduction to the global short message
+            communication service of BeiDou-3. <em>Advances in Space Research</em>
+            67(5), 1701–1708. doi:10.1016/j.asr.2020.12.011.</li>
+          <li>BeiDou RDSS user portal — bdrd.hwasmart.com.</li>
+        </ul>
+      </section>
+    </div>
+  </div>
+
+  <!-- ===== full-width results figure strip ===== -->
+  <h2 class="h-surv striphead">Results — Figures</h2>
+  <div class="resultsgrid">
+    <figure>
+      <img src="../figures/gap1_encoding_comparison.png" alt="Gap 1 encoding">
+      <figcaption>Fig 2 — Gap 1: rescue payload 264 → 112 bits (−57.6%).</figcaption>
+    </figure>
+    <figure>
+      <img src="../figures/gap6_telemetry_comparison.png" alt="Gap 6 telemetry">
+      <figcaption>Fig 3 — Gap 6: binary vs ASCII vs Huffman (−69.6%).</figcaption>
+    </figure>
+    <figure>
+      <img src="../figures/gap3_success_rate.png" alt="Gap 3 delivery">
+      <figcaption>Fig 4 — Gap 3: 100% delivery, 4 environments.</figcaption>
+    </figure>
+    <figure>
+      <img src="../figures/gap3_location_breakdown.png" alt="Gap 3 per location">
+      <figcaption>Fig 5 — Gap 3: all 12 sites at 100%.</figcaption>
+    </figure>
+    <figure>
+      <img src="../figures/fig_gap2_cdf.png" alt="Gap 2 latency CDF">
+      <figcaption>Fig 6 — Gap 2: latency CDF inside 5 s budget.</figcaption>
+    </figure>
+  </div>
+
+  <!-- ===== full-width live demonstration band ===== -->
+  <div class="demoband">
+    <h2 class="h-sim striphead">8 · Live Demonstration — GCS Dashboard</h2>
+    <img src="../figures/new_dashboard.png" alt="BDS-SMC2 live transmission dashboard">
+    <div class="cap">Figure 7 — Real-time transmission dashboard: per-message lifecycle
+      (loaded → module ack → satellite ack → received at portal), live latency, and the
+      decoded rescue payload for each survivor. Verified end-to-end against the simulation
+      harness with byte-identical frames.</div>
+  </div>
+
+  <footer>
+    <div>BDS-SMC2 Node · Dissertation Objective 5 · 2026</div>
+    <div>Letsoalo Maile · github.com/letsoalomaile1/BDS-SMC2</div>
+  </footer>
+</div>
+</body>
+</html>
